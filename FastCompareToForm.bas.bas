@@ -1,10 +1,6 @@
-in file: word/vbaProject.bin - OLE stream: 'VBA/FastCompare'
+in file: word/vbaProject.bin - OLE stream: 'VBA/FastCompareToForm'
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-Sub CheckboxTest()
-MsgBox (SummaryCheckboxValue)
-End Sub
-
-Sub FastCompare()
+Sub FastCompareToForm()
 Application.ScreenUpdating = False
 Dim StrDocOld As String, DocOld As Document
 Dim StrDocNew As String, DocNew As Document
@@ -16,25 +12,26 @@ Set DocNew = ActiveDocument
 StrDocNew = DocNew.FullName
 DocNewPath = DocNew.Path & "\"
 
-' select "original" document to compare active document against
-With Application.FileDialog(FileDialogType:=msoFileDialogFilePicker)
-  .Title = "Select the Original Document"
-  .AllowMultiSelect = False
-  .Filters.Add "Documents", "*.doc; *.docx; *.docm", 1
-  .InitialFileName = DocNewPath
-  .ButtonName = "Compare"
-  If .Show = -1 Then
-    StrDocOld = .SelectedItems(1)
-  Else
-    Exit Sub
-  End If
-  If StrDocOld = StrDocNew Then
-    MsgBox "The original document and revised document are the same.  Try again."
-    Exit Sub
-  End If
-End With
+On Error Resume Next ' create an error trap because there's no "exists" function for variables.
+                     ' https://www.askwoody.com/forums/topic/check-to-see-if-a-docvariable-exists-before-running-line-of-vba-code/
+Dim varCheck As String
+varCheck = ActiveDocument.Variables("formPath").Value
+Debug.Print ActiveDocument.Variables("formPath").Value
+Debug.Print Err.Number
 
-Set DocOld = Documents.Open(StrDocOld)
+If Err.Number = 0 Then
+    StrDocOld = ActiveDocument.Variables("formPath").Value
+Else
+    MsgBox "Looks like this document was not created with the FKSDO Save As button, so you'll have to use the regular Fast Compare button and navigage to the form."
+    On Error GoTo 0
+    GoTo ErrExit
+End If
+On Error GoTo 0 ' Reset error handler
+
+'Confirm that the user wants to run this redline.
+If MsgBox("Compare to this document?" & vbCr & StrDocOld, vbYesNoCancel) <> vbYes Then GoTo ErrExit
+
+Set DocOld = Documents.Open(StrDocOld) 'If the formPath variable is set, then use that to open the form.
 
 ' run comparison
 Dim DocRev As Document
@@ -53,7 +50,7 @@ End If
 
 ' save comparison with filename of DocNew with "-redline" appended
 StrDocNew = Left(StrDocNew, (InStrRev(StrDocNew, ".", -1, vbTextCompare) - 1))
-StrDocNew = StrDocNew & "-redline"
+StrDocNew = StrDocNew & "-redline to form"
 
 With Application.Dialogs(wdDialogFileSaveAs)
     .Name = StrDocNew
@@ -68,9 +65,11 @@ End With
 '    DocRev.Save 'Have to save again for some reason.
     
 ErrExit:
-If StrDocOld <> "" Then DocOld.Close 'close DocOld
+If IsEmpty(DocOld) = True Then DocOld.Close 'close DocOld
 ' Bring DocRev to front
-DocRev.Activate
+If IsEmpty(DocRev) = True Then 'Insane that "IsEmpty" returns "False" if the object IS EMPTY!?!?
+    DocRev.Activate
+End If
 Application.ScreenUpdating = True
 Set DocOld = Nothing: Set DocNew = Nothing: Set DocRev = Nothing
 End Sub
@@ -237,7 +236,67 @@ With DocSummary
 End With
 End Function
 
+VBA Stomping detection is experimental: please report any false positive/negative at https://github.com/decalage2/oletools/issues
 
-
-
--------------------------------------------------------------------------------
++----------+--------------------+---------------------------------------------+
+|Type      |Keyword             |Description                                  |
++----------+--------------------+---------------------------------------------+
+|AutoExec  |UserForm_Click      |Runs when the file is opened and ActiveX     |
+|          |                    |objects trigger events                       |
+|Suspicious|Open                |May open a file                              |
+|Suspicious|put                 |May write to a file (if combined with Open)  |
+|Suspicious|output              |May write to a file (if combined with Open)  |
+|Suspicious|CopyFile            |May copy a file                              |
+|Suspicious|Shell               |May run an executable file or a system       |
+|          |                    |command                                      |
+|Suspicious|vbNormalFocus       |May run an executable file or a system       |
+|          |                    |command                                      |
+|Suspicious|run                 |May run an executable file or a system       |
+|          |                    |command                                      |
+|Suspicious|create              |May execute file or a system command through |
+|          |                    |WMI                                          |
+|Suspicious|Call                |May call a DLL using Excel 4 Macros (XLM/XLF)|
+|Suspicious|CreateObject        |May create an OLE object                     |
+|Suspicious|GetObject           |May get an OLE object with a running instance|
+|Suspicious|WINDOWS             |May enumerate application windows (if        |
+|          |                    |combined with Shell.Application object)      |
+|Suspicious|Chr                 |May attempt to obfuscate specific strings    |
+|          |                    |(use option --deobf to deobfuscate)          |
+|Suspicious|ChrW                |May attempt to obfuscate specific strings    |
+|          |                    |(use option --deobf to deobfuscate)          |
+|Suspicious|.Variables          |May use Word Document Variables to store and |
+|          |                    |hide data                                    |
+|Suspicious|Hex Strings         |Hex-encoded strings were detected, may be    |
+|          |                    |used to obfuscate strings (option --decode to|
+|          |                    |see all)                                     |
+|Suspicious|Base64 Strings      |Base64-encoded strings were detected, may be |
+|          |                    |used to obfuscate strings (option --decode to|
+|          |                    |see all)                                     |
+|IOC       |https://stackoverflo|URL                                          |
+|          |w.com/questions/7239|                                             |
+|          |328/how-to-find-    |                                             |
+|          |numbers-from-a-     |                                             |
+|          |string#7239408      |                                             |
+|IOC       |https://www.gmayor.c|URL                                          |
+|          |om                  |                                             |
+|IOC       |https://www.askwoody|URL                                          |
+|          |.com/forums/topic/ch|                                             |
+|          |eck-to-see-if-a-    |                                             |
+|          |docvariable-exists- |                                             |
+|          |before-running-line-|                                             |
+|          |of-vba-code/        |                                             |
+|IOC       |http://github.com/jd|URL                                          |
+|          |dev273/chatgpt-word-|                                             |
+|          |macro               |                                             |
+|IOC       |https://api.openai.c|URL                                          |
+|          |om/v1/chat/completio|                                             |
+|          |ns                  |                                             |
+|IOC       |https://docs.microso|URL                                          |
+|          |ft.com/en-us/office/|                                             |
+|          |vba/api/word.wdcolor|                                             |
+|          |index               |                                             |
+|IOC       |explorer.exe        |Executable file name                         |
+|Suspicious|VBA Stomping        |VBA Stomping was detected: the VBA source    |
+|          |                    |code and P-code are different, this may have |
+|          |                    |been used to hide malicious code             |
++----------+--------------------+---------------------------------------------+

@@ -17,8 +17,8 @@ Select Case control.ID
         MakeDefinition.MakeDefinition
     Case Is = "BoldDefTerms"
         BoldDefinedTerms.BoldDefinedTerms
-    Case Is = "CrossRef"
-        ConvertToCrossRef.ConvertToCrossRef
+    'Case Is = "CrossRef"
+        'ConvertToCrossRef.ConvertToCrossRef
     Case Is = "HowDefined"
         TermDefined.FindDef
     Case Is = "RmvLnBrks"

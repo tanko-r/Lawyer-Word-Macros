@@ -13,5 +13,5 @@ def split_vba_macros(input_file):
             f.write(module_content)
 
 # The path to your file
-file_path = r"C:\Users\david\Desktop\Temp\060623 vba\perviousver.txt"
+file_path = "C:\\Users\\david\\Desktop\\Temp\\Bas\\output.txt"
 split_vba_macros(file_path)

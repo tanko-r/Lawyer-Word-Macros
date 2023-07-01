@@ -1,7 +1,8 @@
-olevba 0.60.1 on Python 3.11.4 - http://decalage.info/python/oletools
+olevba 0.60.1 on Python 3.11.3 - http://decalage.info/python/oletools
 ===============================================================================
-FILE: FKSDOMacros v02 (06.06.2023).dotm
+FILE: FKSDOMacros v02.1 (06.07.2023).dotm
 Type: OpenXML
+XLMMacroDeobfuscator: pywin32 is not installed (only is required if you want to use MS Excel)
 WARNING  For now, VBA stomping cannot be detected for files in memory
 -------------------------------------------------------------------------------
 VBA MACRO ThisDocument.cls 
@@ -359,6 +360,7 @@ End Function
 
 
 
+
 -------------------------------------------------------------------------------
 VBA MACRO FilePath.bas 
 in file: word/vbaProject.bin - OLE stream: 'VBA/FilePath'
@@ -376,8 +378,7 @@ Sub FilePathMacro()
     Selection.ParagraphFormat.SpaceBefore = 6
     Selection.ParagraphFormat.spaceAfter = 0
     Selection.TypeText (Application.ActiveDocument.Path & "\")
-    Selection.Fields.Add Range:=Selection.Range, Type:=wdFieldEmpty, text:= _
-        "FILENAME", PreserveFormatting:=True
+    Selection.Fields.Add Range:=Selection.Range, Type:=wdFieldFileName, PreserveFormatting:=True
     'Selection.HomeKey Unit:=wdLine
     
 '   Selection.Fields.Unlink 'Save for later.  Need to figure out how to loop through footers before this will work correctly.  Otherwise only one of the footers will update.
@@ -390,7 +391,6 @@ Dim oSec As Section
 Dim oCursor As Range
 
 Application.ScreenUpdating = False
-
 
 
 Set oCursor = Selection.Range 'get current position
@@ -504,21 +504,20 @@ Sub UpdatePathMacro()
             Selection.MoveEndWhile Cset:=Chr(13), count:=-1      'Don't delete the paragraph break
             Selection.Delete
             Selection.MoveLeft count:=1
-            Selection.EndOf Unit:=wdParagraph, Extend:=wdMove 'go to the end of the line (inc. page number) and add a par break
-            'Selection.TypeText Chr(13)
+            Selection.EndOf Unit:=wdStory, Extend:=wdMove 'go to the end of the footer
             Selection.TypeText " "
             Selection.MoveLeft count:=1  'The FILENAME field glitches in the FilePathMacro glitches if it is at the very end.
             FilePath.FilePathMacro
-            Selection.EndOf Unit:=wdStory, Extend:=wdMove
+'            Selection.EndOf Unit:=wdStory, Extend:=wdMove
         Else
-            If pathExists = False Then
-                Selection.EndOf Unit:=wdParagraph, Extend:=wdMove 'go to the end of the line (inc. page number) and add a par break
-                Selection.InsertAfter (Chr(13) & " ")
-                FilePath.FilePathMacro
-                Selection.TypeText Chr(13)
-                'Dim rng As Range
-                'Dim remainingText As Range
-            End If
+            Selection.EndOf Unit:=wdStory, Extend:=wdMove 'go to the end of the footer
+            Selection.InsertAfter vbCr & " "
+            Selection.Collapse wdCollapseEnd
+            Selection.MoveLeft count:=1  'The FILENAME field glitches in the FilePathMacro glitches if it is at the very end.
+            FilePath.FilePathMacro
+            'Selection.TypeText Chr(13)
+            'Dim rng As Range
+            'Dim remainingText As Range
         End If
     
         ActiveWindow.ActivePane.View.SeekView = wdSeekMainDocument ' Not sure why but this is necessary to actually move to the next section.
@@ -546,25 +545,18 @@ Sub UpdatePathMacro()
                 Dim rng As Range
                 Set rng = Selection.Range
                 Set remainingText = rng.Document.Range(rng.End, rng.Document.Range.End)
-                If Len(remainingText.text) > 0 Then
-                    ' If there is text after the inserted text, insert a line break after the inserted text
-                    rng.InsertAfter vbLf
-                End If
                 Selection.EndOf Unit:=wdStory, Extend:=wdMove
             Else
-                If pathExists = False Then
-                    Selection.EndOf Unit:=wdParagraph, Extend:=wdMove 'go to the end of the line (inc. page number) and add a par break
-                    Selection.InsertAfter (Chr(13) & " ")
-                    FilePath.FilePathMacro
-                    Selection.Collapse wdCollapseEnd
-                    Selection.TypeText vbLf
-                    'Dim rng As Range
-                    'Dim remainingText As Range
-                    'Set rng = Selection.Range
-                    'Set remainingText = rng.Document.Range(rng.End, rng.Document.Range.End)
-                    'If Len(remainingText.text) > 0 Then rng.InsertAfter vbCr  ' If there is text after the inserted text, insert a line break after the inserted text
-                End If
-
+                Selection.EndOf Unit:=wdParagraph, Extend:=wdMove 'go to the end of the line (inc. page number) and add a par break
+                Selection.InsertAfter (Chr(13) & " ")
+                FilePath.FilePathMacro
+                Selection.Collapse wdCollapseEnd
+                Selection.TypeText vbLf
+                'Dim rng As Range
+                'Dim remainingText As Range
+                'Set rng = Selection.Range
+                'Set remainingText = rng.Document.Range(rng.End, rng.Document.Range.End)
+                'If Len(remainingText.text) > 0 Then rng.InsertAfter vbCr  ' If there is text after the inserted text, insert a line break after the inserted text
             End If
 
             If Selection.Information(wdActiveEndSectionNumber) <> wDoc.Sections.count Then 'If not the last section, then go the next section
@@ -667,15 +659,25 @@ Sub SaveAsFKSDOFile()
 Application.ScreenUpdating = False
 
 Dim curFilename As String
+Dim curFilePath As String
 Dim newFilename As String
 Dim docTitle As String
 Dim sDate As String
 Dim sErr As Boolean
+'Dim testVar As String
+
+curFilename = ActiveDocument.Path & "\" & ActiveDocument.Name 'save the filepath of the document in case the user wants a form redline
+
+'testVar = ActiveDocument.Variables("formPath")
 
 If curFilename <> "" Then
 curFilename = Trim(Left(ActiveDocument.Name, InStrRev(ActiveDocument.Name, ".") - 1))
 Else: curFilename = ""
 End If
+
+'Store the filepath so it can be added to the formPath variable.
+curFilePath = ActiveDocument.FullName
+
 
 sDate = Format(Date, "mmddyy")
 docTitle = InputBox("What is this document called?  E.g. 1AM to Lease", "Document Name", curFilename)
@@ -693,6 +695,20 @@ With Application.Dialogs(wdDialogFileSaveAs)
 End With
         
 FilePath.UpdatePathMacro
+
+On Error Resume Next ' create an error trap because there's no "exists" function for variables.
+                     ' https://www.askwoody.com/forums/topic/check-to-see-if-a-docvariable-exists-before-running-line-of-vba-code/
+Dim varCheck As String
+varCheck = ActiveDocument.Variables("formPath").Value
+
+If Err.Number = 0 Then
+    ActiveDocument.Variables("formPath").Value = curFilePath
+Else
+    ActiveDocument.Variables.Add "formPath", curFilePath
+End If
+Debug.Print ActiveDocument.Variables("formPath").Value
+On Error GoTo 0 ' Reset error handler
+
 ActiveDocument.Save
 
 ErrExit:
@@ -1436,8 +1452,8 @@ Select Case control.ID
         MakeDefinition.MakeDefinition
     Case Is = "BoldDefTerms"
         BoldDefinedTerms.BoldDefinedTerms
-    Case Is = "CrossRef"
-        ConvertToCrossRef.ConvertToCrossRef
+    'Case Is = "CrossRef"
+        'ConvertToCrossRef.ConvertToCrossRef
     Case Is = "HowDefined"
         TermDefined.FindDef
     Case Is = "RmvLnBrks"
@@ -1628,23 +1644,73 @@ in file: word/vbaProject.bin - OLE stream: 'VBA/ConvertToCrossRef'
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 Option Explicit
 
-Sub ConvertToCrossRef()
+Sub ConvertToCrossRefSimplified()
 
+    Dim LookUp As String
+    Dim RefList As Variant
+    Dim i As Integer
+    Dim refIndex As Integer
+    Dim ref As Variant
+    Dim spaceAfter As Boolean
+
+    ' Store the selected text and check if it ends with a space
+    LookUp = Trim(Selection.text)
+    spaceAfter = Right(Selection.text, 1) = " "
+
+    ' Get the list of all numbered items in the document
+    RefList = ActiveDocument.GetCrossReferenceItems(wdRefTypeNumberedItem)
+
+    ' Loop through all numbered items
+    For i = 1 To UBound(RefList)
+        ' Check if the selected text matches the start of the reference item
+        ref = Trim(RefList(i))
+        If InStr(1, RefList(i), LookUp & " ", vbTextCompare) = 1 Or _
+           InStr(1, RefList(i), LookUp & ".", vbTextCompare) = 1 Or _
+           InStr(1, RefList(i), LookUp & Chr(9), vbTextCompare) = 1 Or _
+           InStr(1, RefList(i), LookUp & vbCr, vbTextCompare) = 1 Then
+            refIndex = i
+            Exit For
+        End If
+    Next i
+
+    ' If a matching reference was found, insert the cross reference
+    If refIndex > 0 Then
+        Selection.InsertCrossReference ReferenceType:="Numbered item", _
+                                       ReferenceKind:=wdNumberFullContext, _
+                                       ReferenceItem:=CStr(refIndex), _
+                                       InsertAsHyperlink:=True, _
+                                       IncludePosition:=False, _
+                                       SeparateNumbers:=False, _
+                                       SeparatorString:=" "
+        If spaceAfter Then Selection.Range.InsertAfter " "
+    Else
+        MsgBox "A cross reference to """ & LookUp & """ couldn't be set" & vbCr & _
+               "because a paragraph with that number couldn't" & vbCr & _
+               "be found in the document.", _
+               vbInformation, "Invalid cross reference"
+    End If
+
+End Sub
+
+
+
+Sub ConvertToCrossRefOG()
+    
     Dim RefList As Variant
     Dim LookUp As String
-    Dim Ref As String
-    Dim s As Integer, t As Integer
+    Dim ref As String
+    Dim spaceLoc As Integer, tabLoc As Integer
     Dim i As Integer
     Dim oRng As Range
     Dim oRngStr As String
     Dim spaceAfter As Boolean
-
+    
     On Error GoTo ErrExit
     Set oRng = Selection.Range
     oRngStr = Selection.Range.text
-
+    
     If oRng.Characters(Len(oRngStr)) = Chr(32) Then spaceAfter = True
-
+    
     With oRng
         .MoveEndWhile Chr(32), wdBackward
         .MoveStartWhile Chr(32)
@@ -1660,35 +1726,36 @@ Sub ConvertToCrossRef()
             (.End > .Start)
             .MoveEnd wdCharacter, -1
         Loop
-
+        
 ErrExit:
         If Len(.text) = 0 Then
             MsgBox "Please select a reference.", _
             vbExclamation, "Invalid selection"
             Exit Sub
         End If
-
+        
         LookUp = .text
     End With
     On Error GoTo 0
-
+    
     With ActiveDocument
-        ' Use WdRefTypeHeading to retrieve Headings
+        ' Use WdRefTypeNumberedItem to retrieve numbered items (including single numbers)
         RefList = .GetCrossReferenceItems(wdRefTypeNumberedItem)
         For i = UBound(RefList) To 1 Step -1
-            Ref = Trim(RefList(i))
-            If InStr(1, Ref, LookUp, vbTextCompare) = 1 Then
-                s = InStr(2, Ref, " ")
-                t = InStr(2, Ref, Chr(9))
-                If (s = 0) Or (t = 0) Then
-                    s = IIf(s > 0, s, t)
+            ref = Trim(RefList(i))
+            If InStr(1, ref, LookUp, vbTextCompare) = 1 Then
+                spaceLoc = InStr(2, ref, " ")
+                tabLoc = InStr(2, ref, Chr(9))
+                If (spaceLoc = 0) Or (tabLoc = 0) Then
+                    spaceLoc = IIf(spaceLoc > 0, spaceLoc, tabLoc)
                 Else
-                    s = IIf(s < t, s, t)
+                    spaceLoc = IIf(spaceLoc < tabLoc, spaceLoc, tabLoc)
                 End If
-                If LookUp = Left(Ref, s - 1) Then Exit For
+                
+                If LookUp = Left(ref, spaceLoc - 1) Then Exit For
             End If
         Next i
-
+        
         If i Then
             Selection.InsertCrossReference ReferenceType:="Numbered item", _
             ReferenceKind:=wdNumberFullContext, _
@@ -1706,7 +1773,6 @@ ErrExit:
         End If
     End With
 End Sub
-
 -------------------------------------------------------------------------------
 VBA MACRO ChatGPT.bas 
 in file: word/vbaProject.bin - OLE stream: 'VBA/ChatGPT'
@@ -2419,33 +2485,39 @@ If ActiveDocument.Revisions.count = 0 Then
     End
 End If
     Dim strPages As String
-    Dim currpg As String
+    Dim currPg As String
+    Dim currSec As String
+    Dim oSec As Section
+    Dim secPgs As PageNumbers
     Dim prevpg As String
     Dim currText As String
-    strPages = "1"
+    strPages = "p1s1"
     prevpg = "1"
 Selection.HomeKey (wdStory)
 For Each myRev In ActiveDocument.Range.Revisions
-    currpg = myRev.Range.Information(Word.WdInformation.wdActiveEndPageNumber)
+    currPg = myRev.Range.Information(Word.WdInformation.wdActiveEndPageNumber)
+    currSec = myRev.Range.Information(Word.WdInformation.wdActiveEndSectionNumber)
     currText = myRev.Range.text
-    If Len(currText) < 10 And "Article" = Left(currText, 7) Then
-        myRev.Accept
-        GoTo nextmyrev
-    ElseIf myRev.FormatDescription <> "" And Left(currText, 1) <> "([0-9]{1,})" Then
-        myRev.Accept
-        GoTo nextmyrev
-    ElseIf myRev.Range.Information(Word.WdInformation.wdInHeaderFooter) _
-        And currpg = "1" Then
-        myRev.Accept
-        GoTo nextmyrev
-    End If
-    If prevpg <> currpg _
-       And Not strPages Like "*" & currpg & "*" _
-       And Not currpg = "1" Then 'add page to list, unless already there
-        strPages = strPages & "," & currpg
+
+'' I'm pretty sure all of this is unnecessary, but holding it just in case.''
+'    If Len(currText) < 10 And "Article" = Left(currText, 7) Then
+'        myRev.Accept
+'        GoTo nextmyrev
+'    ElseIf myRev.FormatDescription <> "" And Left(currText, 1) <> "([0-9]{1,})" Then
+'        myRev.Accept
+'        GoTo nextmyrev
+'    ElseIf myRev.Range.Information(Word.WdInformation.wdInHeaderFooter) _
+'        And currpg = "1" Then
+'        myRev.Accept
+'        GoTo nextmyrev
+'    End If
+    If prevpg <> currPg _
+       And Not strPages Like "*" & currPg & "*" _
+       And Not currPg = "1" Then 'add page to list, unless already there
+        strPages = strPages & "," & "p" & currPg & "s" & currSec
     End If
 nextmyrev:
-prevpg = currpg
+prevpg = currPg
 Next myRev
     'Print
     With Dialogs(wdDialogFilePrint)
@@ -2454,6 +2526,67 @@ Next myRev
        .Show
     End With
 End Sub
+
+Sub PrintOnlyMarkupPages2()
+
+If ActiveDocument.Revisions.count = 0 Then
+    MsgBox "No revisions found."
+    Exit Sub
+End If
+
+Dim strPages As String
+Dim currPg As Long
+Dim currSec As Long
+Dim prevpg As Long
+Dim currSecPg As Long
+Dim currText As String
+Dim secStart As Long
+Dim secEnd As Long
+
+strPages = "p1s1"
+prevpg = 1
+
+Selection.HomeKey (wdStory)
+
+For i = 1 To ActiveDocument.Range.Revisions.count
+    myRev = ActiveDocument.Range.Revisions(i)
+    If currPg = myRev.Range.Information(Word.WdInformation.wdActiveEndPageNumber) Then
+        pgRevs = ActiveDocument.Range.
+        i = ActiveDocument.Range.Revisions(myRev.Range.Information(Word.WdInformation.wdActiveEndPageNumber))
+        Range.Revisions.
+        GoTo nextmyrev
+    Else
+        currPg = myRev.Range.Information(Word.WdInformation.wdActiveEndPageNumber)
+    End If
+    currSec = myRev.Range.Information(Word.WdInformation.wdActiveEndSectionNumber)
+    currText = myRev.Range.text
+    
+    With ActiveDocument.Sections(currSec)
+        secStart = .Range.Characters.First.Information(Word.WdInformation.wdActiveEndPageNumber)
+        secEnd = .Range.Characters.Last.Information(Word.WdInformation.wdActiveEndPageNumber)
+    End With
+    
+    currSecPg = currPg - secStart + 1
+    
+    If prevpg <> currSecPg _
+       And Not strPages Like "*p" & currSecPg & "s" & currSec & "*" _
+       And Not currSecPg = 1 Then 'add page to list, unless already there
+        strPages = strPages & "," & "p" & currSecPg & "s" & currSec
+    End If
+    
+nextmyrev:
+prevpg = currSecPg
+Next i
+
+'Print
+With Dialogs(wdDialogFilePrint)
+   .Range = wdPrintRangeOfPages
+   .Pages = strPages
+   .Show
+End With
+
+End Sub
+
 
 -------------------------------------------------------------------------------
 VBA MACRO ApplyHeadingStyles.bas 
@@ -2497,6 +2630,246 @@ Option Explicit
 Private Sub UserForm_Click()
 
 End Sub
+-------------------------------------------------------------------------------
+VBA MACRO FastCompareToForm.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/FastCompareToForm'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Sub FastCompareToForm()
+Application.ScreenUpdating = False
+Dim StrDocOld As String, DocOld As Document
+Dim StrDocNew As String, DocNew As Document
+Dim DocNewPath As String
+Dim DocSummary As Shape
+Dim IsBoxChecked As Boolean
+
+Set DocNew = ActiveDocument
+StrDocNew = DocNew.FullName
+DocNewPath = DocNew.Path & "\"
+
+On Error Resume Next ' create an error trap because there's no "exists" function for variables.
+                     ' https://www.askwoody.com/forums/topic/check-to-see-if-a-docvariable-exists-before-running-line-of-vba-code/
+Dim varCheck As String
+varCheck = ActiveDocument.Variables("formPath").Value
+Debug.Print ActiveDocument.Variables("formPath").Value
+Debug.Print Err.Number
+
+If Err.Number = 0 Then
+    StrDocOld = ActiveDocument.Variables("formPath").Value
+Else
+    MsgBox "Looks like this document was not created with the FKSDO Save As button, so you'll have to use the regular Fast Compare button and navigage to the form."
+    On Error GoTo 0
+    GoTo ErrExit
+End If
+On Error GoTo 0 ' Reset error handler
+
+'Confirm that the user wants to run this redline.
+If MsgBox("Compare to this document?" & vbCr & StrDocOld, vbYesNoCancel) <> vbYes Then GoTo ErrExit
+
+Set DocOld = Documents.Open(StrDocOld) 'If the formPath variable is set, then use that to open the form.
+
+' run comparison
+Dim DocRev As Document
+
+Set DocRev = Application.CompareDocuments( _
+  OriginalDocument:=DocOld, RevisedDocument:=DocNew, _
+  Destination:=wdCompareDestinationNew, Granularity:=wdGranularityWordLevel, _
+  CompareFormatting:=False, CompareCaseChanges:=True, CompareWhitespace:=False, _
+  CompareTables:=True, CompareHeaders:=True, CompareFootnotes:=True, _
+  CompareTextboxes:=True, CompareFields:=False, CompareComments:=True, _
+  CompareMoves:=True, RevisedAuthor:="Author", IgnoreAllComparisonWarnings:=False)
+
+If SummaryCheckboxValue = True Then
+    Call AddBox(DocOld, DocNew, DocRev)               'Someday, I will figureout how to get a checkbox  on the ribbon and control the summary box there.
+End If
+
+' save comparison with filename of DocNew with "-redline" appended
+StrDocNew = Left(StrDocNew, (InStrRev(StrDocNew, ".", -1, vbTextCompare) - 1))
+StrDocNew = StrDocNew & "-redline to form"
+
+With Application.Dialogs(wdDialogFileSaveAs)
+    .Name = StrDocNew
+    If .Show <> -1 Then GoTo ErrExit
+End With
+
+'Export to PDF
+'    TrackChangesOptions
+'    StrDocRev = DocRev.Name
+'    DocRev.SaveAs2 FileName:=StrDocNew & ".pdf", _
+'       FileFormat:=wdFormatPDF
+'    DocRev.Save 'Have to save again for some reason.
+    
+ErrExit:
+If IsEmpty(DocOld) = True Then DocOld.Close 'close DocOld
+' Bring DocRev to front
+If IsEmpty(DocRev) = True Then 'Insane that "IsEmpty" returns "False" if the object IS EMPTY!?!?
+    DocRev.Activate
+End If
+Application.ScreenUpdating = True
+Set DocOld = Nothing: Set DocNew = Nothing: Set DocRev = Nothing
+End Sub
+
+
+Sub MTKFastCompare()
+Application.ScreenUpdating = False
+Dim StrDocOld As String, DocOld As Document
+Dim StrDocNew As String, DocNew As Document
+Dim DocNewPath As String
+Set DocNew = ActiveDocument
+StrDocNew = DocNew.FullName
+DocNewPath = DocNew.Path & "\"
+
+' select "original" document to compare active document against
+With Application.FileDialog(FileDialogType:=msoFileDialogFilePicker)
+  .Title = "Select the Original Document"
+  .AllowMultiSelect = False
+  .Filters.Add "Documents", "*.doc; *.docx; *.docm", 1
+  .InitialFileName = DocNewPath
+  .ButtonName = "Compare"
+  If .Show = -1 Then
+    StrDocOld = .SelectedItems(1)
+  Else
+    Exit Sub
+  End If
+  If StrDocOld = StrDocNew Then
+    MsgBox "The original document and revised document are the same.  Try again."
+    Exit Sub
+  End If
+End With
+
+Set DocOld = Documents.Open(StrDocOld)
+
+' run comparison
+Dim DocRev As Document
+
+Set DocRev = Application.CompareDocuments( _
+  OriginalDocument:=DocOld, RevisedDocument:=DocNew, _
+  Destination:=wdCompareDestinationNew, Granularity:=wdGranularityWordLevel, _
+  CompareFormatting:=False, CompareCaseChanges:=True, CompareWhitespace:=False, _
+  CompareTables:=True, CompareHeaders:=True, CompareFootnotes:=True, _
+  CompareTextboxes:=True, CompareFields:=False, CompareComments:=True, _
+  CompareMoves:=True, RevisedAuthor:="Author", IgnoreAllComparisonWarnings:=False)
+
+' *** save comparison with filename of DocNew with "-redline" appended\
+    'Find the version number
+    Dim sVer As String
+    StrDocNew = Left(StrDocNew, (InStrRev(StrDocNew, ".", -1, vbTextCompare) - 1))
+    StrDocOld = DocOld.Name
+    DocOldNameOnly = Left(StrDocOld, InStrRev(StrDocOld, "(") - 1) 'Need shortened name to avoid conflict with dates
+    vVer = Split(DocOldNameOnly, Chr(32))
+    If (vVer(UBound(vVer))) = "" Then sVer = vVer(UBound(vVer) - 1) Else sVer = vVer(UBound(vVer))
+    sVer = onlyDigits(sVer)
+   
+    DocOldLen = InStrRev(DocOldNameOnly, sVer, -1, vbTextCompare) - 1  'Find position of version number
+    DocOldLen = (Len(StrDocOld) - DocOldLen) 'Find the position from the right of the version number
+    StrDocOld = Right(StrDocOld, DocOldLen) 'Take the right side of the filename back to the version number
+
+With Application.Dialogs(wdDialogFileSaveAs)
+    .Name = StrDocNew & "-redline to v" & StrDocOld
+    If .Show <> -1 Then GoTo ErrExit
+End With
+
+'Export to PDF
+    TrackChangesOptions
+    StrDocRev = Left(DocRev.Name, (InStrRev(DocRev.Name, ".", -1, vbTextCompare) - 1))
+    DocRev.SaveAs2 FileName:=StrDocRev & ".pdf", _
+       FileFormat:=wdFormatPDF
+    DocRev.Save 'Have to save again for some reason.
+
+ErrExit:
+If StrDocOld <> "" Then DocOld.Close 'close DocOld
+' Bring DocRev to front
+DocRev.Activate
+Application.ScreenUpdating = True
+Set DocOld = Nothing: Set DocNew = Nothing: Set DocRev = Nothing
+End Sub
+
+
+
+
+Private Function onlyDigits(s As String) As String
+'https://stackoverflow.com/questions/7239328/how-to-find-numbers-from-a-string#7239408
+'modified by Graham Mayor - https://www.gmayor.com - Last updated - 04 Apr 2021
+' Variables needed (remember to use "option explicit").   '
+Dim retval As String    ' This is the return string for the version number.      '
+Dim i As Integer        ' Counter for character position. '
+
+' Initialise return string to empty                       '
+    retval = ""
+
+    ' For every character in input string, copy digits to     '
+    '   return string.                                        '
+    For i = 1 To Len(s)
+        If Mid(s, i, 1) >= "0" And Mid(s, i, 1) <= "9" Or Mid(s, i, 1) = "." Then
+            retval = retval + Mid(s, i, 1)
+        End If
+    Next
+
+    ' Then return the return string.                          '
+    onlyDigits = retval
+       
+    
+End Function
+
+Private Function TrackChangesOptions()
+
+With Options
+        'MARKUP group
+        'Insertions
+        .InsertedTextColor = wdClassicBlue
+        'Deletions
+        .DeletedTextColor = wdClassicRed
+        
+        'MOVES group
+        'Moved from
+        .MoveFromTextMark = wdMoveFromTextMarkDoubleStrikeThrough
+        .MoveFromTextColor = wdGreen
+        'Moved to
+        .MoveToTextMark = wdMoveToTextMarkDoubleUnderline
+        .MoveToTextColor = wdGreen
+        
+        'TABLE CELL HIGHLIGHTING group
+        'Inserted cells
+        .InsertedCellColor = wdCellColorLightBlue
+        'Deleted cells
+        .DeletedCellColor = wdCellColorPink
+        'Merged cells
+        .MergedCellColor = wdCellColorLightYellow
+        'Split cells
+        .SplitCellColor = wdCellColorLightOrange
+    End With
+End Function
+
+Function AddBox(DocOld As Document, DocNew As Document, DocRev As Document)
+'Add summary of comparison document to text box at top of first page
+Dim BoxWidth As Long
+Dim DocSummary As Shape
+
+If Len(DocOld.Name) > Len(DocNew.Name) Then BoxWidth = Len(DocOld.Name) Else BoxWidth = Len(DocNew.Name)
+DocRev.Activate
+DocRev.TrackRevisions = False
+Selection.HomeKey wdStory
+Set DocSummary = ActiveDocument.Shapes.AddTextbox(Orientation:=msoTextOrientationHorizontal, Width:=BoxWidth * 7, Left:=25, top:=25, Height:=40) '
+With DocSummary
+    .RelativeHorizontalPosition = wdRelativeHorizontalPositionPage
+    .RelativeVerticalPosition = wdRelativeVerticalPositionPage
+    .top = 25 ' Position from top of page
+    .Left = 25 ' Position from left of page
+        
+    .Line.Visible = msoFalse
+    .Shadow.Visible = msoFalse
+    .Fill.ForeColor.RGB = RGB(255, 255, 255)
+    With .TextFrame.TextRange
+        .Style = wdStylePlainText
+        .ParagraphFormat.Reset
+        .ParagraphFormat.FirstLineIndent = 0
+        .Font.Size = 8
+        .Font.Name = "Tahoma"
+        .InsertAfter "Redline" & Chr(13) & "Original:" & Chr(9) & DocOld.Name & Chr(13) & "Revised:" & Chr(9) & DocNew.Name 'how do I make "Redline" bold without a cumbersome for loop?
+    End With
+
+End With
+End Function
+
 VBA Stomping detection is experimental: please report any false positive/negative at https://github.com/decalage2/oletools/issues
 
 +----------+--------------------+---------------------------------------------+
@@ -2525,6 +2898,8 @@ VBA Stomping detection is experimental: please report any false positive/negativ
 |          |                    |(use option --deobf to deobfuscate)          |
 |Suspicious|ChrW                |May attempt to obfuscate specific strings    |
 |          |                    |(use option --deobf to deobfuscate)          |
+|Suspicious|.Variables          |May use Word Document Variables to store and |
+|          |                    |hide data                                    |
 |Suspicious|Hex Strings         |Hex-encoded strings were detected, may be    |
 |          |                    |used to obfuscate strings (option --decode to|
 |          |                    |see all)                                     |
@@ -2538,6 +2913,12 @@ VBA Stomping detection is experimental: please report any false positive/negativ
 |          |string#7239408      |                                             |
 |IOC       |https://www.gmayor.c|URL                                          |
 |          |om                  |                                             |
+|IOC       |https://www.askwoody|URL                                          |
+|          |.com/forums/topic/ch|                                             |
+|          |eck-to-see-if-a-    |                                             |
+|          |docvariable-exists- |                                             |
+|          |before-running-line-|                                             |
+|          |of-vba-code/        |                                             |
 |IOC       |http://github.com/jd|URL                                          |
 |          |dev273/chatgpt-word-|                                             |
 |          |macro               |                                             |
