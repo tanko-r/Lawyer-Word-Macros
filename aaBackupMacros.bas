@@ -11,7 +11,7 @@ Sub ExportAllModules()
     Set fso = CreateObject("scripting.FileSystemObject")
     templatePath = ActiveDocument.FullName
     dateToday = Format(Date, "mm.dd.yyyy")
-    If InStrRev(templatePath, "STARTUP") = 0 Then
+    If InStr(templatePath, "STARTUP") = 0 Then
         MsgBox ("Please activate the Global Template and then rerun this.")
         Exit Sub
     End If
@@ -24,8 +24,6 @@ Sub ExportAllModules()
         End If
     Next VBComp
     
-    fso.CopyFile Source:=templatePath, Destination:=SaveToDirectory & "FKSDO Macros " & dateToday & ".dotm"
-    Set fso = Nothing
-    
+    fso.CopyFile Source:=templatePath, Destination:=SaveToDirectory & "templates\" & "FKSDO Macros " & dateToday & ".dotm"
 End Sub
 
