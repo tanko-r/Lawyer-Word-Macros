@@ -1,0 +1,2555 @@
+olevba 0.60.1 on Python 3.11.4 - http://decalage.info/python/oletools
+===============================================================================
+FILE: FKSDOMacros v02 (06.06.2023).dotm
+Type: OpenXML
+WARNING  For now, VBA stomping cannot be detected for files in memory
+-------------------------------------------------------------------------------
+VBA MACRO ThisDocument.cls 
+in file: word/vbaProject.bin - OLE stream: 'VBA/ThisDocument'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+(empty macro)
+-------------------------------------------------------------------------------
+VBA MACRO BoldDefinedTerms.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/BoldDefinedTerms'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+Sub BoldDefinedTerms()
+'
+    'Replace straight quotes with curly quotes
+    Options.AutoFormatAsYouTypeReplaceQuotes = True
+    With ActiveDocument.Range.Find
+        .ClearFormatting
+        .Replacement.ClearFormatting
+        .text = """"
+        .Replacement.text = """"
+        .Forward = True
+        .Wrap = wdFindStop
+        .Format = False
+        .MatchCase = False
+        .MatchWholeWord = False
+        .MatchWildcards = False
+        .MatchSoundsLike = False
+        .MatchAllWordForms = False
+        .Execute Replace:=wdReplaceAll
+    End With
+
+
+    'Replace text in quotes with bold, limited to capitalized terms
+    Selection.Find.ClearFormatting
+    Selection.Find.Replacement.ClearFormatting
+    Selection.Find.Replacement.Font.Bold = True
+    With Selection.Find
+        .text = "[" & ChrW$(8220) & "][A-Z]*[" & ChrW$(8221) & "]"
+        .Replacement.text = "^&"
+        .Replacement.Font.Underline = wdUnderlineNone
+        .Replacement.Font.Italic = False
+        .Forward = True
+        .Wrap = wdFindContinue
+        .Format = True
+        .MatchCase = False
+        .MatchWholeWord = False
+        .MatchAllWordForms = False
+        .MatchSoundsLike = False
+        .MatchWildcards = True
+    End With
+    
+    'Replace bolded quotation marks with not bold
+    Selection.Find.Execute Replace:=wdReplaceAll
+    Selection.Find.ClearFormatting
+    Selection.Find.Replacement.ClearFormatting
+    Selection.Find.Replacement.Font.Bold = False
+    With Selection.Find
+        .text = "[" & ChrW$(8220) & ChrW$(8221) & "]"
+        .Replacement.text = "^&"
+        .Forward = True
+        .Wrap = wdFindContinue
+        .Format = True
+        .MatchCase = False
+        .MatchWholeWord = False
+        .MatchAllWordForms = False
+        .MatchSoundsLike = False
+        .MatchWildcards = True
+    End With
+    Selection.Find.Execute Replace:=wdReplaceAll
+    
+    Selection.Find.text = ""
+    Selection.Find.ClearFormatting
+    Selection.Find.Replacement.text = ""
+    Selection.Find.Replacement.ClearFormatting
+    Selection.Find.MatchCase = False
+    Selection.Find.MatchWildcards = False
+End Sub
+-------------------------------------------------------------------------------
+VBA MACRO EmailDocument.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/EmailDocument'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Sub EmailDocumentMacro()
+Dim wOl As Object
+Dim wOlMail As Object
+Dim wOlInsp As Object
+Dim wOlAttachment As Object
+Dim wd As Object
+Dim wStrBody As String
+Dim wPath As String
+
+Debug.Print ActiveDocument.Saved
+
+If ActiveDocument.Saved = False Then
+    If MsgBox(Prompt:="Do you want to save the document first? Any changes since your last save will not be sent.", Buttons:=vbYesNoCancel) = vbYes Then
+        ActiveDocument.Save
+        Else: Exit Sub
+    End If
+End If
+
+wPath = ActiveDocument.Path
+oStrBody = "Here's a link to the document folder: <a href=" & Chr(34) & wPath & Chr(34) & ">" & wPath & "</a>"
+
+Set wOl = GetObject(Class:="Outlook.Application")
+Set wOlMail = wOl.CreateItem(0)
+
+With wOlMail
+    .HTMLbody = .HTMLbody & oStrBody
+    Set wOlInsp = .GetInspector
+    If wOlInsp.EditorType = 4 Then Set wd = wOlInsp.WordEditor
+    .Attachments.Add ActiveDocument.FullName
+    .Display
+End With
+
+End Sub
+-------------------------------------------------------------------------------
+VBA MACRO FastCompare.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/FastCompare'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Sub CheckboxTest()
+MsgBox (SummaryCheckboxValue)
+End Sub
+
+Sub FastCompare()
+Application.ScreenUpdating = False
+Dim StrDocOld As String, DocOld As Document
+Dim StrDocNew As String, DocNew As Document
+Dim DocNewPath As String
+Dim DocSummary As Shape
+Dim IsBoxChecked As Boolean
+
+Set DocNew = ActiveDocument
+StrDocNew = DocNew.FullName
+DocNewPath = DocNew.Path & "\"
+
+' select "original" document to compare active document against
+With Application.FileDialog(FileDialogType:=msoFileDialogFilePicker)
+  .Title = "Select the Original Document"
+  .AllowMultiSelect = False
+  .Filters.Add "Documents", "*.doc; *.docx; *.docm", 1
+  .InitialFileName = DocNewPath
+  .ButtonName = "Compare"
+  If .Show = -1 Then
+    StrDocOld = .SelectedItems(1)
+  Else
+    Exit Sub
+  End If
+  If StrDocOld = StrDocNew Then
+    MsgBox "The original document and revised document are the same.  Try again."
+    Exit Sub
+  End If
+End With
+
+Set DocOld = Documents.Open(StrDocOld)
+
+' run comparison
+Dim DocRev As Document
+
+Set DocRev = Application.CompareDocuments( _
+  OriginalDocument:=DocOld, RevisedDocument:=DocNew, _
+  Destination:=wdCompareDestinationNew, Granularity:=wdGranularityWordLevel, _
+  CompareFormatting:=False, CompareCaseChanges:=True, CompareWhitespace:=False, _
+  CompareTables:=True, CompareHeaders:=True, CompareFootnotes:=True, _
+  CompareTextboxes:=True, CompareFields:=False, CompareComments:=True, _
+  CompareMoves:=True, RevisedAuthor:="Author", IgnoreAllComparisonWarnings:=False)
+
+If SummaryCheckboxValue = True Then
+    Call AddBox(DocOld, DocNew, DocRev)               'Someday, I will figureout how to get a checkbox  on the ribbon and control the summary box there.
+End If
+
+' save comparison with filename of DocNew with "-redline" appended
+StrDocNew = Left(StrDocNew, (InStrRev(StrDocNew, ".", -1, vbTextCompare) - 1))
+StrDocNew = StrDocNew & "-redline"
+
+With Application.Dialogs(wdDialogFileSaveAs)
+    .Name = StrDocNew
+    If .Show <> -1 Then GoTo ErrExit
+End With
+
+'Export to PDF
+'    TrackChangesOptions
+'    StrDocRev = DocRev.Name
+'    DocRev.SaveAs2 FileName:=StrDocNew & ".pdf", _
+'       FileFormat:=wdFormatPDF
+'    DocRev.Save 'Have to save again for some reason.
+    
+ErrExit:
+If StrDocOld <> "" Then DocOld.Close 'close DocOld
+' Bring DocRev to front
+DocRev.Activate
+Application.ScreenUpdating = True
+Set DocOld = Nothing: Set DocNew = Nothing: Set DocRev = Nothing
+End Sub
+
+
+Sub MTKFastCompare()
+Application.ScreenUpdating = False
+Dim StrDocOld As String, DocOld As Document
+Dim StrDocNew As String, DocNew As Document
+Dim DocNewPath As String
+Set DocNew = ActiveDocument
+StrDocNew = DocNew.FullName
+DocNewPath = DocNew.Path & "\"
+
+' select "original" document to compare active document against
+With Application.FileDialog(FileDialogType:=msoFileDialogFilePicker)
+  .Title = "Select the Original Document"
+  .AllowMultiSelect = False
+  .Filters.Add "Documents", "*.doc; *.docx; *.docm", 1
+  .InitialFileName = DocNewPath
+  .ButtonName = "Compare"
+  If .Show = -1 Then
+    StrDocOld = .SelectedItems(1)
+  Else
+    Exit Sub
+  End If
+  If StrDocOld = StrDocNew Then
+    MsgBox "The original document and revised document are the same.  Try again."
+    Exit Sub
+  End If
+End With
+
+Set DocOld = Documents.Open(StrDocOld)
+
+' run comparison
+Dim DocRev As Document
+
+Set DocRev = Application.CompareDocuments( _
+  OriginalDocument:=DocOld, RevisedDocument:=DocNew, _
+  Destination:=wdCompareDestinationNew, Granularity:=wdGranularityWordLevel, _
+  CompareFormatting:=False, CompareCaseChanges:=True, CompareWhitespace:=False, _
+  CompareTables:=True, CompareHeaders:=True, CompareFootnotes:=True, _
+  CompareTextboxes:=True, CompareFields:=False, CompareComments:=True, _
+  CompareMoves:=True, RevisedAuthor:="Author", IgnoreAllComparisonWarnings:=False)
+
+' *** save comparison with filename of DocNew with "-redline" appended\
+    'Find the version number
+    Dim sVer As String
+    StrDocNew = Left(StrDocNew, (InStrRev(StrDocNew, ".", -1, vbTextCompare) - 1))
+    StrDocOld = DocOld.Name
+    DocOldNameOnly = Left(StrDocOld, InStrRev(StrDocOld, "(") - 1) 'Need shortened name to avoid conflict with dates
+    vVer = Split(DocOldNameOnly, Chr(32))
+    If (vVer(UBound(vVer))) = "" Then sVer = vVer(UBound(vVer) - 1) Else sVer = vVer(UBound(vVer))
+    sVer = onlyDigits(sVer)
+   
+    DocOldLen = InStrRev(DocOldNameOnly, sVer, -1, vbTextCompare) - 1  'Find position of version number
+    DocOldLen = (Len(StrDocOld) - DocOldLen) 'Find the position from the right of the version number
+    StrDocOld = Right(StrDocOld, DocOldLen) 'Take the right side of the filename back to the version number
+
+With Application.Dialogs(wdDialogFileSaveAs)
+    .Name = StrDocNew & "-redline to v" & StrDocOld
+    If .Show <> -1 Then GoTo ErrExit
+End With
+
+'Export to PDF
+    TrackChangesOptions
+    StrDocRev = Left(DocRev.Name, (InStrRev(DocRev.Name, ".", -1, vbTextCompare) - 1))
+    DocRev.SaveAs2 FileName:=StrDocRev & ".pdf", _
+       FileFormat:=wdFormatPDF
+    DocRev.Save 'Have to save again for some reason.
+
+ErrExit:
+If StrDocOld <> "" Then DocOld.Close 'close DocOld
+' Bring DocRev to front
+DocRev.Activate
+Application.ScreenUpdating = True
+Set DocOld = Nothing: Set DocNew = Nothing: Set DocRev = Nothing
+End Sub
+
+
+
+
+Private Function onlyDigits(s As String) As String
+'https://stackoverflow.com/questions/7239328/how-to-find-numbers-from-a-string#7239408
+'modified by Graham Mayor - https://www.gmayor.com - Last updated - 04 Apr 2021
+' Variables needed (remember to use "option explicit").   '
+Dim retval As String    ' This is the return string for the version number.      '
+Dim i As Integer        ' Counter for character position. '
+
+' Initialise return string to empty                       '
+    retval = ""
+
+    ' For every character in input string, copy digits to     '
+    '   return string.                                        '
+    For i = 1 To Len(s)
+        If Mid(s, i, 1) >= "0" And Mid(s, i, 1) <= "9" Or Mid(s, i, 1) = "." Then
+            retval = retval + Mid(s, i, 1)
+        End If
+    Next
+
+    ' Then return the return string.                          '
+    onlyDigits = retval
+       
+    
+End Function
+
+Private Function TrackChangesOptions()
+
+With Options
+        'MARKUP group
+        'Insertions
+        .InsertedTextColor = wdClassicBlue
+        'Deletions
+        .DeletedTextColor = wdClassicRed
+        
+        'MOVES group
+        'Moved from
+        .MoveFromTextMark = wdMoveFromTextMarkDoubleStrikeThrough
+        .MoveFromTextColor = wdGreen
+        'Moved to
+        .MoveToTextMark = wdMoveToTextMarkDoubleUnderline
+        .MoveToTextColor = wdGreen
+        
+        'TABLE CELL HIGHLIGHTING group
+        'Inserted cells
+        .InsertedCellColor = wdCellColorLightBlue
+        'Deleted cells
+        .DeletedCellColor = wdCellColorPink
+        'Merged cells
+        .MergedCellColor = wdCellColorLightYellow
+        'Split cells
+        .SplitCellColor = wdCellColorLightOrange
+    End With
+End Function
+
+Function AddBox(DocOld As Document, DocNew As Document, DocRev As Document)
+'Add summary of comparison document to text box at top of first page
+Dim BoxWidth As Long
+Dim DocSummary As Shape
+
+If Len(DocOld.Name) > Len(DocNew.Name) Then BoxWidth = Len(DocOld.Name) Else BoxWidth = Len(DocNew.Name)
+DocRev.Activate
+DocRev.TrackRevisions = False
+Selection.HomeKey wdStory
+Set DocSummary = ActiveDocument.Shapes.AddTextbox(Orientation:=msoTextOrientationHorizontal, Width:=BoxWidth * 7, Left:=25, top:=25, Height:=40) '
+With DocSummary
+    .RelativeHorizontalPosition = wdRelativeHorizontalPositionPage
+    .RelativeVerticalPosition = wdRelativeVerticalPositionPage
+    .top = 25 ' Position from top of page
+    .Left = 25 ' Position from left of page
+        
+    .Line.Visible = msoFalse
+    .Shadow.Visible = msoFalse
+    .Fill.ForeColor.RGB = RGB(255, 255, 255)
+    With .TextFrame.TextRange
+        .Style = wdStylePlainText
+        .ParagraphFormat.Reset
+        .ParagraphFormat.FirstLineIndent = 0
+        .Font.Size = 8
+        .Font.Name = "Tahoma"
+        .InsertAfter "Redline" & Chr(13) & "Original:" & Chr(9) & DocOld.Name & Chr(13) & "Revised:" & Chr(9) & DocNew.Name 'how do I make "Redline" bold without a cumbersome for loop?
+    End With
+
+End With
+End Function
+
+
+
+-------------------------------------------------------------------------------
+VBA MACRO FilePath.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/FilePath'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Option Explicit
+Sub FilePathMacro()
+' Inserts filepath as plaintext plus dynamic filename.  This is to preserve the FKSDO filepath when converting to PDF or sending to outsiders.
+
+    Selection.ClearFormatting
+    Selection.Font.Name = "Tahoma"
+    Selection.Font.Size = 6
+    Selection.Font.Bold = False
+    Selection.Font.AllCaps = False
+    Selection.ParagraphFormat.Alignment = wdAlignParagraphLeft
+    Selection.ParagraphFormat.SpaceBefore = 6
+    Selection.ParagraphFormat.spaceAfter = 0
+    Selection.TypeText (Application.ActiveDocument.Path & "\")
+    Selection.Fields.Add Range:=Selection.Range, Type:=wdFieldEmpty, text:= _
+        "FILENAME", PreserveFormatting:=True
+    'Selection.HomeKey Unit:=wdLine
+    
+'   Selection.Fields.Unlink 'Save for later.  Need to figure out how to loop through footers before this will work correctly.  Otherwise only one of the footers will update.
+    
+End Sub
+
+Sub AddPath()
+'Look for a footer and then prompt to add one, if missing
+Dim oSec As Section
+Dim oCursor As Range
+
+Application.ScreenUpdating = False
+
+
+
+Set oCursor = Selection.Range 'get current position
+'Selection.GoTo What:=wdGoToSection, Which:=wdGoToFirst 'For use later when looping through sections.
+
+
+'    For Each oSec In Application.ActiveDocument.Sections ' For use later--to loop through sections and add footer in all sections.
+'           Application.ActiveDocument.Range.GoTo ' Incomplete, for use later-- to loop through sections.
+    ActiveWindow.ActivePane.View.SeekView = wdSeekCurrentPageFooter
+    Selection.Find.ClearFormatting
+    With Selection.Find
+        .text = "\"
+        .Forward = True
+        .Wrap = wdFindContinue
+        .Format = False
+        .MatchCase = False
+        .MatchWholeWord = False
+        .MatchWildcards = False
+        .MatchSoundsLike = False
+        .MatchAllWordForms = False
+        If Selection.Find.Execute = True Then
+            FilePath.UpdatePathMacro
+'            Selection.HomeKey
+'            Selection.EndKey Unit:=wdLine, Extend:=wdExtend
+'            Selection.Delete
+'            Selection.TypeText Chr(13)
+'            FilePath.FilePathMacro
+        End If
+        If Selection.Find.Execute = False Then
+            If MsgBox("Do you want to add a filepath footer?", vbYesNo) = vbYes Then
+                Selection.GoTo What:=wdGoToSection, Which:=wdGoToFirst
+                ActiveWindow.ActivePane.View.SeekView = wdSeekCurrentPageFooter
+                Selection.EndKey Unit:=wdStory, Extend:=wdMove
+                Selection.TypeText Chr(13)
+                FilePath.FilePathMacro
+            End If
+         End If
+    End With
+    ActiveWindow.ActivePane.View.SeekView = wdSeekMainDocument 'Get view out of the footer
+    ActiveDocument.Save
+'    Next oSec
+
+' oCursor.Select ' return cursor to original position  ''Currently unused because it changes the view to Draft for some reason.
+Application.ScreenUpdating = True
+End Sub
+
+Sub UpdatePathMacro()
+    Dim wFind As Find
+    Dim wDoc As Document
+    Dim newFooter As Long
+    Dim pathExists As Boolean
+    Dim footerExists As Boolean
+    Dim footerRange As Range
+    Dim sec As Section
+    Dim loopBreak As Long
+    Dim runFtrUPdate As Boolean
+    Dim currentPosition As Range
+    Dim oView As WdViewType
+    Dim oldPath As String
+    
+    Application.ScreenUpdating = False
+    
+    Set currentPosition = Selection.Range 'store current cursor position
+    oView = ActiveDocument.ActiveWindow.View.Type 'store the user's view because we have to use print layout
+     
+    Set wDoc = Application.ActiveDocument
+    For Each sec In wDoc.Sections          'Start by looping through each footer and update fields.  At minimum, all existing footers should be updated.
+        sec.Footers(wdHeaderFooterPrimary).Range.Fields.Update
+        sec.Footers(wdHeaderFooterFirstPage).Range.Fields.Update 'Gotta update these separately, annoyingly.
+        sec.Footers(wdHeaderFooterEvenPages).Range.Fields.Update
+    Next sec
+
+    If FooterCheck() <> "" Then
+        footerExists = True                             'If the footercheck returned any results, then a footer exists.
+        runFtrUPdate = True
+    End If
+                                                        
+    If footerExists <> True Then                        'If a footer does not exist, then ask the user.
+        newFooter = MsgBox("Do you want to add a filepath footer?", vbYesNo)
+        If newFooter <> 6 Then GoTo ErrExit             'if the user does not agree to a new footer, exit the sub
+        If newFooter = 6 Then runFtrUPdate = True
+    End If
+    
+    If runFtrUPdate = True Then                              'If User wants a enw footer, add a new footer in each section
+        ' Replace footer in first section
+        Selection.GoTo What:=wdGoToSection, Which:=wdGoToFirst
+        ActiveDocument.ActiveWindow.View.Type = wdPrintView
+        ActiveWindow.ActivePane.View.SeekView = wdSeekCurrentPageFooter 'Go to the footer in the first section
+        Selection.HomeKey Unit:=wdStory, Extend:=wdMove
+    
+        'Start the find process
+        Selection.Find.ClearFormatting
+    
+        Set wFind = Selection.Find                   'Look for existing footers and we will delete each footer path, then reinsert.
+        With wFind                                   'Search down through the footers.  When accessing Find via Selection, the Selection is moved.
+            .text = "\"                              'look for the backslash in a filepath, but note that this maybe overinclusive -- might be other kinds of text
+            .Forward = True
+            .Wrap = wdFindStop
+            .Format = False
+            .MatchCase = False
+            .MatchWholeWord = False
+            .MatchWildcards = False
+            .MatchSoundsLike = False
+            .MatchAllWordForms = False
+        End With
+        
+        If wFind.Execute = True Then                 'Add path to the first section
+            pathExists = True
+            Selection.HomeKey
+            Selection.EndOf Unit:=wdParagraph, Extend:=wdExtend
+            Selection.MoveEndWhile Cset:=Chr(13), count:=-1      'Don't delete the paragraph break
+            Selection.Delete
+            Selection.MoveLeft count:=1
+            Selection.EndOf Unit:=wdParagraph, Extend:=wdMove 'go to the end of the line (inc. page number) and add a par break
+            'Selection.TypeText Chr(13)
+            Selection.TypeText " "
+            Selection.MoveLeft count:=1  'The FILENAME field glitches in the FilePathMacro glitches if it is at the very end.
+            FilePath.FilePathMacro
+            Selection.EndOf Unit:=wdStory, Extend:=wdMove
+        Else
+            If pathExists = False Then
+                Selection.EndOf Unit:=wdParagraph, Extend:=wdMove 'go to the end of the line (inc. page number) and add a par break
+                Selection.InsertAfter (Chr(13) & " ")
+                FilePath.FilePathMacro
+                Selection.TypeText Chr(13)
+                'Dim rng As Range
+                'Dim remainingText As Range
+            End If
+        End If
+    
+        ActiveWindow.ActivePane.View.SeekView = wdSeekMainDocument ' Not sure why but this is necessary to actually move to the next section.
+        Selection.GoTo What:=wdGoToSection, Which:=wdGoToNext
+        ActiveWindow.ActivePane.View.SeekView = wdSeekCurrentPageFooter
+   
+        'Loop through each subsequent section in the document and find the \ character.  Delete all existing footers.
+        Do
+
+            If loopBreak > wDoc.Sections.count Then GoTo ErrExit     'Sometimes this seems to get caught in a loop.  Break the loop after total sections and exit.
+            Selection.StartOf Unit:=wdStory, Extend:=wdMove
+            If wFind.Execute = True Then
+                pathExists = True
+                Selection.HomeKey
+                Selection.EndOf Unit:=wdParagraph, Extend:=wdExtend
+                Selection.MoveEndWhile Cset:=Chr(13), count:=-1      'Don't delete the paragraph break
+                Selection.Delete
+                Selection.MoveLeft count:=1
+                Selection.EndOf Unit:=wdParagraph, Extend:=wdMove 'go to the end of the line (inc. page number) and add a par break
+                'Selection.TypeText Chr(13)
+                Selection.TypeText " "
+                Selection.MoveLeft count:=1  'The FILENAME field glitches in the FilePathMacro glitches if it is at the very end.
+                FilePath.FilePathMacro
+                Dim remainingText As Range
+                Dim rng As Range
+                Set rng = Selection.Range
+                Set remainingText = rng.Document.Range(rng.End, rng.Document.Range.End)
+                If Len(remainingText.text) > 0 Then
+                    ' If there is text after the inserted text, insert a line break after the inserted text
+                    rng.InsertAfter vbLf
+                End If
+                Selection.EndOf Unit:=wdStory, Extend:=wdMove
+            Else
+                If pathExists = False Then
+                    Selection.EndOf Unit:=wdParagraph, Extend:=wdMove 'go to the end of the line (inc. page number) and add a par break
+                    Selection.InsertAfter (Chr(13) & " ")
+                    FilePath.FilePathMacro
+                    Selection.Collapse wdCollapseEnd
+                    Selection.TypeText vbLf
+                    'Dim rng As Range
+                    'Dim remainingText As Range
+                    'Set rng = Selection.Range
+                    'Set remainingText = rng.Document.Range(rng.End, rng.Document.Range.End)
+                    'If Len(remainingText.text) > 0 Then rng.InsertAfter vbCr  ' If there is text after the inserted text, insert a line break after the inserted text
+                End If
+
+            End If
+
+            If Selection.Information(wdActiveEndSectionNumber) <> wDoc.Sections.count Then 'If not the last section, then go the next section
+                ActiveWindow.ActivePane.View.SeekView = wdSeekMainDocument ' Not sure why but this is necessary to actually move to the next section.
+                Selection.GoTo What:=wdGoToSection, Which:=wdGoToNext
+                ActiveWindow.ActivePane.View.SeekView = wdSeekCurrentPageFooter
+            Else                                 'if the last section, exit the loop.
+                ActiveWindow.ActivePane.View.SeekView = wdSeekMainDocument
+                Exit Do
+            End If
+
+            pathExists = False                      'pathExists should default to false unless found on the next loop, though this is probably unnecessary.
+            loopBreak = loopBreak + 1               'increment the loop break
+        Loop
+
+
+        ' _______________________EXPERIMENTAL!!___________________________________
+        ' Following is a new concept, which will create a unique docID based on the client/matter, the doc name, and the doc version
+        ' ________________________END_____________________________________________
+
+
+    End If
+    
+ErrExit:
+    currentPosition.Select                                'return cursor to original position
+    Selection.Find.text = ""                              'Clear the find text
+    Selection.Find.Wrap = wdFindContinue                  'Continue is usually the expected Find behavior
+    ActiveDocument.ActiveWindow.View.Type = oView              'restore the user's original view
+    Application.ScreenUpdating = True
+    ActiveWindow.ActivePane.View.SeekView = wdSeekMainDocument 'get out of the footer again
+End Sub
+
+Sub OpenFolder()
+    Dim FolderName As String
+    Dim docPath As String
+    docPath = ActiveDocument.Path
+    
+    Application.ScreenUpdating = False
+    
+    If InStr(docPath, "G:") = 0 Then
+        If InStr(docPath, "data") = 0 Then
+            FolderName = FilePath.FooterCheck
+        Else
+            FolderName = docPath
+        End If
+    End If
+    
+    If FolderName = "" Then FolderName = docPath & "\"
+    Shell "C:\WINDOWS\explorer.exe """ & FolderName & "", vbNormalFocus
+    
+    Application.ScreenUpdating = True
+End Sub
+
+Public Function FooterCheck() As String
+'Returns a string with the folder path in the footer, without the filename
+Dim inFolder As String
+Dim ftrTarget As String
+Dim currentPosition As Range
+
+'Application.ScreenUpdating = False
+
+    'keep track of the current position
+    Set currentPosition = Selection.Range 'pick up current cursor position
+    Selection.GoTo What:=wdGoToSection, Which:=wdGoToFirst 'Look for a footer on the first page
+    ActiveWindow.ActivePane.View.SeekView = wdSeekCurrentPageFooter
+    Selection.Find.ClearFormatting
+    With Selection.Find
+        .text = "\"
+        .Forward = True
+        .Wrap = wdFindContinue
+        .Format = False
+        .MatchCase = False
+        .MatchWholeWord = False
+        .MatchWildcards = False
+        .MatchSoundsLike = False
+        .MatchAllWordForms = False
+    End With
+    If Selection.Find.Execute = True Then
+    'Select whole filepath and trim down to folder path.
+        Selection.EndKey wdLine, wdMove
+        Selection.HomeKey wdLine, wdExtend
+        inFolder = Trim(Left(Selection, InStrRev(Selection, "\")))
+    End If
+    ActiveWindow.ActivePane.View.SeekView = wdSeekMainDocument 'Get view out of the footer
+    
+    'return to original cursor position.
+    currentPosition.Select
+
+FooterCheck = inFolder
+End Function
+
+
+
+
+-------------------------------------------------------------------------------
+VBA MACRO FKSDOSaveAs.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/FKSDOSaveAs'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Sub SaveAsFKSDOFile()
+Application.ScreenUpdating = False
+
+Dim curFilename As String
+Dim newFilename As String
+Dim docTitle As String
+Dim sDate As String
+Dim sErr As Boolean
+
+If curFilename <> "" Then
+curFilename = Trim(Left(ActiveDocument.Name, InStrRev(ActiveDocument.Name, ".") - 1))
+Else: curFilename = ""
+End If
+
+sDate = Format(Date, "mmddyy")
+docTitle = InputBox("What is this document called?  E.g. 1AM to Lease", "Document Name", curFilename)
+If docTitle = "" Then
+    sErr = True
+    Exit Sub
+If docTitle = vbCancel Then Exit Sub
+End If
+
+newFilename = docTitle & "01 (" & Application.UserInitials & " " & sDate & ")"
+
+With Application.Dialogs(wdDialogFileSaveAs)
+    .Name = ActiveDocument.Path & "\" & newFilename
+    If .Show <> 0 Then sErr = True
+End With
+        
+FilePath.UpdatePathMacro
+ActiveDocument.Save
+
+ErrExit:
+    Application.ScreenUpdating = True
+    Exit Sub
+
+End Sub
+
+-------------------------------------------------------------------------------
+VBA MACRO HilightTerm.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/HilightTerm'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+Sub HighlightSelectedTerm()
+
+Dim oRng As Range
+Set oRng = Selection.Range
+
+With oRng
+    'avoid inadvertently selected spaces at start and end of the selection
+    .MoveEndWhile Chr(32), wdBackward
+    .MoveStartWhile Chr(32)
+End With
+
+Options.DefaultHighlightColorIndex = wdYellow
+
+    Selection.Find.ClearFormatting
+    Selection.Find.Replacement.ClearFormatting
+    Selection.Find.MatchCase = False
+    With ActiveDocument.content.Find
+        .text = oRng
+        .Replacement.text = "^&"
+        .Replacement.Highlight = True
+        .Forward = True
+        .Wrap = wdFindContinue
+        .Format = True
+        .MatchCase = False
+        .MatchWholeWord = False
+        .MatchAllWordForms = False
+        .MatchSoundsLike = False
+        .MatchWildcards = False
+        .Execute Replace:=wdReplaceAll
+    End With
+
+
+End Sub
+
+
+Sub UnHighlightSelectedTerm()
+
+Dim oRng As Range
+Set oRng = Selection.Range
+
+With oRng
+    'avoid inadvertently selected spaces at start and end of the selection
+    .MoveEndWhile Chr(32), wdBackward
+    .MoveStartWhile Chr(32)
+End With
+
+Options.DefaultHighlightColorIndex = wdNoHighlight
+
+    Selection.Find.ClearFormatting
+    Selection.Find.Replacement.ClearFormatting
+    Selection.Find.MatchCase = False
+    With ActiveDocument.content.Find
+        .text = oRng
+        .Replacement.text = "^&"
+        .Replacement.Highlight = True
+        .Forward = True
+        .Wrap = wdFindContinue
+        .Format = True
+        .MatchCase = False
+        .MatchWholeWord = False
+        .MatchAllWordForms = False
+        .MatchSoundsLike = False
+        .MatchWildcards = False
+        .Execute Replace:=wdReplaceAll
+    End With
+
+Options.DefaultHighlightColorIndex = wdYellow
+
+End Sub
+-------------------------------------------------------------------------------
+VBA MACRO CopyToForms.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/CopyToForms'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Sub CopyToForms()
+'Copies active document into a form folder.  Does not change the active document at all.
+
+Dim sDoc As Document
+Dim sDocPath As String
+Dim sFolderPicker As FileDialog
+Dim sFormPath As String
+Dim sFormName As String
+Dim fso As Object
+Set fso = CreateObject("scripting.FileSystemObject")
+Set sDoc = ActiveDocument
+
+Select Case MsgBox("Save this document first? Only the saved version will be copied.", vbYesNoCancel)
+    Case Is = vbYes
+        ActiveDocument.Save
+    Case Is = vbCancel
+        Exit Sub
+End Select
+
+sFormName = InputBox("Name this form, e.g. 'Lease -- Tenant friendly'")
+If Len(sFormName) = 0 Then Exit Sub
+
+sDocPath = sDoc.FullName
+Set sFolderPicker = Application.FileDialog(msoFileDialogFolderPicker)
+With sFolderPicker
+        .Title = "Select a Folder"
+        .AllowMultiSelect = False
+        .InitialFileName = "C:\Users\DSR\Documents\Candidate Forms\"
+        .Show
+        sFormPath = .SelectedItems(1) & "\" & sFormName & ".docx"
+End With
+
+fso.CopyFile Source:=sDocPath, Destination:=sFormPath
+fso.Quit
+
+End Sub
+
+-------------------------------------------------------------------------------
+VBA MACRO HighlightBrackets.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/HighlightBrackets'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+
+Sub HighlightBrackets()
+
+Set searchRange = ActiveDocument.content
+
+'Set highlight color
+Options.DefaultHighlightColorIndex = wdYellow
+
+'Replace text in quotes with bold
+    Selection.Find.ClearFormatting
+    Selection.Find.Replacement.Highlight = True
+    With ActiveDocument.content.Find
+.text = "\[*\]"
+.Replacement.text = "^&"
+.Forward = True
+.Wrap = wdFindContinue
+        .Format = True
+        .Replacement.Highlight = True
+        .MatchCase = False
+        .MatchWholeWord = False
+        .MatchAllWordForms = False
+        .MatchSoundsLike = False
+        .MatchWildcards = True
+        .Execute Replace:=wdReplaceAll
+    End With
+    
+    Selection.Find.ClearFormatting
+    Selection.Find.Replacement.ClearFormatting
+    Selection.Find.MatchCase = False
+    Selection.Find.MatchWildcards = False
+    
+End Sub
+-------------------------------------------------------------------------------
+VBA MACRO NumeralsOnly.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/NumeralsOnly'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Sub NumeralsOnly()
+
+Dim sSelect As Selection
+Dim sWords As String
+Dim sNumeral As String
+Dim sLenSelect As Long
+Dim sSelectStr As String
+Set sSelect = Selection
+
+
+If Len(sSelect) = 0 Then
+    MsgBox "Nothing selected", vbCritical
+    Exit Sub
+End If
+
+With sSelect
+    'avoid inadvertently selected spaces at start and end of the selection
+    .MoveEndWhile Chr(32), wdBackward
+    .MoveStartWhile Chr(32)
+End With
+
+sLenSelect = Len(sSelect)
+sLenRight = InStrRev(sSelect, "(") - 1
+sSelectStr = Right(sSelect, sLenSelect - sLenRight)
+For i = 1 To Len(sSelectStr)
+        If Mid(sSelectStr, i, 1) >= "0" And Mid(sSelectStr, i, 1) <= "9" Or Mid(sSelectStr, i, 1) = "." Or Mid(sSelectStr, i, 1) = "," Or Mid(sSelectStr, i, 1) = "$" Or Mid(sSelectStr, i, 1) = "%" Then
+            sNumeral = sNumeral + Mid(sSelectStr, i, 1)
+        End If
+Next
+
+Debug.Print sSelect
+Debug.Print Len(sSelect)
+Selection.Collapse Direction:=wdCollapseStart
+Selection.Delete Unit:=wdCharacter, count:=sLenSelect
+Selection.TypeText sNumeral
+
+End Sub
+-------------------------------------------------------------------------------
+VBA MACRO MakeDefinition.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/MakeDefinition'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+Sub MakeDefinition()
+    Dim oRng As Range
+    Dim savRng As Range
+    
+    Set oRng = Selection.Range
+    Set savRng = Selection.Range
+    If Len(oRng) = 0 Then
+        MsgBox "Nothing selected", vbCritical
+        GoTo lbl_Exit
+    End If
+    With oRng
+        'avoid inadvertently selected spaces at start and end of the selection
+        .MoveEndWhile Chr(32), wdBackward
+        .MoveStartWhile Chr(32)
+        'make selection bold
+        .Font.Bold = True
+        'add parenthesis and quotation marks
+        .InsertBefore Chr(40) & Chr(147)
+        .InsertAfter Chr(148) & Chr(41)
+        'optional remove bold emphasis from parenthesis and quotation marks
+        .Characters.First.Bold = False
+        .Characters.First.Next.Bold = False
+        .Characters.Last.Bold = False
+        .Characters.Last.Previous.Bold = False
+    End With
+    savRng.Select
+    Selection.Collapse (wdCollapseEnd)
+lbl_Exit:
+    Exit Sub
+End Sub
+-------------------------------------------------------------------------------
+VBA MACRO DontAddSpace.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/DontAddSpace'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Sub DontAddSpaceMacro()
+
+Selection.Style.NoSpaceBetweenParagraphsOfSameStyle = False
+
+End Sub
+-------------------------------------------------------------------------------
+VBA MACRO FKSDONewIncremental.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/FKSDONewIncremental'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Sub SaveNewIncremental()
+'PURPOSE: Same as FKSDONewVersion, but only saves an incremental (e.g. 01.2 --> 01.3)
+
+Dim sPath As String
+Dim sName As String, sNewName As String
+Dim sExt As String
+Dim sVer As String
+Dim vVer As Variant
+Dim sDate As String
+Dim sInitials As String
+Dim newFilename As String
+Dim sFormat As String
+Dim verIncremental As Boolean
+Dim lenAfterDot As Long
+Dim verAfterDot As String
+
+    sInitials = Application.UserInitials
+    sPath = ActiveDocument.Path
+    If sPath = "" Then GoTo NotSavedYet
+    sPath = sPath & "\"
+    sName = ActiveDocument.Name
+    sFormat = DateFormat(sName)
+    sDate = Format(Date, sFormat) 'Format the date
+    sExt = Right(sName, Len(sName) - InStrRev(sName, ".") + 1)
+    sNewName = Trim(Left(sName, InStrRev(sName, "(") - 1))
+    sVer = sNewName
+    vVer = Split(sVer, Chr(32))
+    sVer = onlyDigits(CStr(vVer(UBound(vVer))))
+
+' Find number of digits after "." and find incremental version number, and set verIncremental
+If InStrRev(sVer, ".") >= 1 Then
+    verIncremental = True
+    verAfterDot = Mid(sVer, InStr(1, sVer, ".") + 1)
+Else
+    verIncremental = False
+End If
+    
+' Upversion document to a new incremental version.  If it's an integer version, save as new .1
+If verIncremental = True Then
+    sNewName = Replace(sNewName, "." & verAfterDot, "." & verAfterDot + 1)
+Else
+    sNewName = Replace(sNewName, sVer, Format(sVer + 0.1, "00.0"))
+End If
+
+' Name and save doc using existing spacing and quirks
+If InStrRev(ActiveDocument.Name, " (") > 0 Then
+    newFilename = sNewName & " (" & sInitials & Chr(32) & sDate & ")"
+Else
+    newFilename = sNewName & "(" & sInitials & Chr(32) & sDate & ")"
+End If
+Dim vShow As Variant
+With Application.Dialogs(wdDialogFileSaveAs)
+    .Name = ActiveDocument.Path & "\" & newFilename
+    If .Show = 0 Then GoTo lbl_Exit
+End With
+
+FilePath.UpdatePathMacro
+
+
+lbl_Exit:
+    Exit Sub
+    'Error Handler
+NotSavedYet:
+    MsgBox "This file has not been initially saved. " & _
+           "Cannot save a new version.", vbCritical, "Not Saved To Computer"    '
+    GoTo lbl_Exit
+
+End Sub
+Private Function onlyDigits(s As String) As String
+'https://stackoverflow.com/questions/7239328/how-to-find-numbers-from-a-string#7239408
+'modified by Graham Mayor - https://www.gmayor.com - Last updated - 04 Apr 2021
+' Variables needed (remember to use "option explicit").   '
+Dim retval As String    ' This is the return string for the version number.      '
+Dim i As Integer        ' Counter for character position. '
+
+' Initialise return string to empty                       '
+    retval = ""
+
+    ' For every character in input string, copy digits to     '
+    '   return string.                                        '
+    For i = 1 To Len(s)
+        If Mid(s, i, 1) >= "0" And Mid(s, i, 1) <= "9" Or Mid(s, i, 1) = "." Then
+            retval = retval + Mid(s, i, 1)
+        End If
+    Next
+
+    ' Then return the return string.                          '
+    onlyDigits = retval
+       
+    
+End Function
+
+Private Function DateFormat(sName As String) As String
+' ©Graham Mayor - https://www.gmayor.com - Last updated - 04 Apr 2021
+Dim sDate As String
+sDate = Right(sName, Len(sName) - InStrRev(sName, "(") + 1)
+    If InStr(1, sDate, "(") > 0 Then
+        sDate = Split(sDate, "(")(1)
+        sDate = Split(sDate, " ")(1)
+        sDate = Split(sDate, ")")(0)
+        If InStr(1, sDate, ".") > 0 Then
+            DateFormat = "mm.dd.yy" 'note lower case!
+        Else
+            DateFormat = "mmddyy"
+        End If
+    Else
+        DateFormat = "mm.dd.yy"
+    End If
+End Function
+
+
+
+-------------------------------------------------------------------------------
+VBA MACRO RemoveLineBreaks.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/RemoveLineBreaks'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+
+Sub RemoveLineBreaks()
+'A basic Word macro coded by Greg Maxey
+Dim oRng As Word.Range
+Set oRng = Selection.Range
+  If oRng.Characters.Last = Chr(13) Or oRng.Characters.Last = Chr(11) Then
+    oRng.End = oRng.End - 1
+  End If
+  oRng.text = Replace(Replace(oRng.text, Chr(11), " "), Chr(13), " ")
+lbl_Exit:
+  Exit Sub
+End Sub
+-------------------------------------------------------------------------------
+VBA MACRO TermDefined.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/TermDefined'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Sub FindDef()
+Dim wdFind As Find
+Dim wdRng As Range
+Dim wdDoc As Document
+Dim wdSelect As Range
+Dim openQuote As String
+
+Set wdDoc = Application.ActiveDocument
+Set wdRng = wdDoc.content
+Set wdSelect = Selection.Range
+
+'eliminate beginning and trailing spaces
+With wdSelect
+    .MoveEndWhile Chr(32), wdBackward
+    .MoveStartWhile Chr(32)
+End With
+
+'Search parameters
+With wdRng.Find
+    .text = Chr(34) & wdSelect ' Somehow this returns both straight and curly quotes.  Not sure why but it works.
+    '.Execute function returns TRUE/FALSE
+    Searchresult = .Execute
+End With
+
+'Select entire sentence containing definition.
+Dim wdDefinition As String
+wdRng.Expand (wdSentence)
+wdDefinition = wdRng
+
+'Show message if searchresult = true
+If Searchresult = True Then
+    MsgBox Prompt:=wdDefinition, Title:="Yep, this is defined."
+    Else: MsgBox "Nope, not defined."
+End If
+
+End Sub
+-------------------------------------------------------------------------------
+VBA MACRO FKSDONote.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/FKSDONote'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Sub FKSDONoteMacro()
+'Puts selected text into brackets, makes uppercase and bold, and highlights in gray, MTK style.
+'Doesn't work quite right.  The closing bracket ends up bold and in highlight.
+
+Dim oRng As Range
+Set oRng = Selection.Range
+    
+    If Len(oRng) = 0 Then
+        MsgBox "Nothing selected", vbCritical
+        GoTo lbl_Exit
+    End If
+    With oRng
+        'avoid inadvertently selected spaces at start and end of the selection
+        .MoveEndWhile Chr(32), wdBackward
+        .MoveStartWhile Chr(32)
+        'make selection bold
+        .Font.Bold = True
+        .Case = wdUpperCase
+        .HighlightColorIndex = wdGray25
+        'add brackets
+        .InsertBefore Chr(91)
+        .InsertAfter Chr(93)
+        'optional remove bold emphasis from parenthesis and quotation marks
+        .Characters.First.Bold = False
+        .Characters.Last.Bold = False
+        .Characters.Last.Next.Bold = False
+        .Characters.Last.HighlightColorIndex = wdNoHighlight
+        .Characters.Last.Next.HighlightColorIndex = wdNoHighlight
+    End With
+lbl_Exit:
+    Exit Sub
+
+End Sub
+
+
+-------------------------------------------------------------------------------
+VBA MACRO FKSDONewVersion.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/FKSDONewVersion'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Sub SaveNewVersion_Word()
+'PURPOSE: Save file, if already exists add a new version indicator to filename
+'Graham Mayor - https://www.gmayor.com - Last updated - 04 Apr 2021
+
+Dim sPath As String
+Dim sName As String, sNewName As String
+Dim sExt As String
+Dim sVer As String
+Dim vVer As Variant
+Dim sDate As String
+Dim sInitials As String
+Dim newFilename As String
+Dim sFormat As String
+Dim verIncremental As Boolean
+Dim lenAfterDot As Long
+Dim verAfterDot As String
+
+    sInitials = Application.UserInitials
+    sPath = ActiveDocument.Path
+    If sPath = "" Then GoTo NotSavedYet
+    sPath = sPath & "\"
+    sName = ActiveDocument.Name
+    sFormat = DateFormat(sName)
+    sDate = Format(Date, sFormat) 'Format the date
+    sExt = Right(sName, Len(sName) - InStrRev(sName, ".") + 1)
+    sNewName = Trim(Left(sName, InStrRev(sName, "(") - 1))
+    sVer = sNewName
+    vVer = Split(sVer, Chr(32))
+    sVer = onlyDigits(CStr(vVer(UBound(vVer))))
+
+' Find number of digits after "." and find incremental version number, and set verIncremental
+If InStrRev(sVer, ".") >= 1 Then
+    verIncremental = True
+    verAfterDot = Mid(sVer, InStr(1, sVer, ".") + 1)
+Else
+    verIncremental = False
+End If
+    
+' Upversion document, defaulted to whether current doc is incremental or not
+If verIncremental = True Then
+    Dim verBeforeDot As String
+    verBeforeDot = Left(sVer, InStr(1, sVer, ".", vbTextCompare) - 1)
+    sNewName = Replace(sNewName, sVer, Format(verBeforeDot + 1, "00"))
+Else
+    sNewName = Replace(sNewName, sVer, Format(sVer + 1, "00"))
+End If
+
+
+
+' Name and save doc using existing spacing and quirks
+If InStrRev(ActiveDocument.Name, " (") > 0 Then
+    newFilename = sNewName & " (" & sInitials & Chr(32) & sDate & ")"
+Else
+    newFilename = sNewName & "(" & sInitials & Chr(32) & sDate & ")"
+End If
+Dim vShow As Variant
+With Application.Dialogs(wdDialogFileSaveAs)
+    .Name = ActiveDocument.Path & "\" & newFilename
+    If .Show = 0 Then GoTo lbl_Exit
+End With
+
+FilePath.UpdatePathMacro
+
+
+lbl_Exit:
+    Exit Sub
+    'Error Handler
+NotSavedYet:
+    MsgBox "This file has not been initially saved. " & _
+           "Cannot save a new version.", vbCritical, "Not Saved To Computer"    '
+    GoTo lbl_Exit
+
+End Sub
+Private Function onlyDigits(s As String) As String
+'https://stackoverflow.com/questions/7239328/how-to-find-numbers-from-a-string#7239408
+'modified by Graham Mayor - https://www.gmayor.com - Last updated - 04 Apr 2021
+' Variables needed (remember to use "option explicit").   '
+Dim retval As String    ' This is the return string for the version number.      '
+Dim i As Integer        ' Counter for character position. '
+
+' Initialise return string to empty                       '
+    retval = ""
+
+    ' For every character in input string, copy digits to     '
+    '   return string.                                        '
+    For i = 1 To Len(s)
+        If Mid(s, i, 1) >= "0" And Mid(s, i, 1) <= "9" Or Mid(s, i, 1) = "." Then
+            retval = retval + Mid(s, i, 1)
+        End If
+    Next
+
+    ' Then return the return string.                          '
+    onlyDigits = retval
+       
+    
+End Function
+
+Private Function DateFormat(sName As String) As String
+' ©Graham Mayor - https://www.gmayor.com - Last updated - 04 Apr 2021
+Dim sDate As String
+sDate = Right(sName, Len(sName) - InStrRev(sName, "(") + 1)
+    If InStr(1, sDate, "(") > 0 Then
+        sDate = Split(sDate, "(")(1)
+        sDate = Split(sDate, " ")(1)
+        sDate = Split(sDate, ")")(0)
+        If InStr(1, sDate, ".") > 0 Then
+            DateFormat = "mm.dd.yy" 'note lower case!
+        Else
+            DateFormat = "mmddyy"
+        End If
+    Else
+        DateFormat = "mm.dd.yy"
+    End If
+End Function
+
+-------------------------------------------------------------------------------
+VBA MACRO StepThroughSentences.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/StepThroughSentences'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Sub StepRightSentence()
+
+    Selection.Sentences(1).Next(Unit:=wdSentence, count:=1).Select
+
+End Sub
+
+
+-------------------------------------------------------------------------------
+VBA MACRO FKSDOSaveInSequence.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/FKSDOSaveInSequence'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+
+Sub SaveInSequence()
+'PURPOSE: Save file in version sequence with existing file, add a new version indicator to filename
+'by David Rubenstein - Copyright June 29, 2021
+
+Dim sName As String, sNewName As String
+Dim sDoc As Document
+Dim sExt As String
+Dim sVer As String
+Dim vVer As Variant
+Dim sDate As String
+Dim newFilename As String
+Dim sFormat As String
+Dim verBeforeDot As String
+Dim lastInSeq As String
+Dim docTitle As String
+Dim sPath As String
+Dim myRange As Range
+Dim inFolder As String
+
+inFolder = FilePath.FooterCheck
+If inFolder = "" Then inFolder = "G:\"
+    
+' Open filepicker to choose document to sequence from
+With Application.FileDialog(msoFileDialogOpen)
+    .Title = "Choose the most recent version"
+    .AllowMultiSelect = False
+    .InitialFileName = inFolder
+    If .Show <> -1 Then
+        Exit Sub
+    End If
+lastInSeq = .SelectedItems(1)
+sPath = Left(lastInSeq, InStrRev(lastInSeq, "\"))
+End With
+
+
+' Get version and date information about lastInSeq
+    sFormat = DateFormat(lastInSeq)
+    sDate = Format(Date, sFormat) 'Format the date
+    sNewName = Trim(Left(lastInSeq, InStrRev(lastInSeq, "(") - 1))
+    sVer = sNewName
+    vVer = Split(sVer, Chr(32))
+    sVer = onlyDigits(CStr(vVer(UBound(vVer))))
+
+sDocTitle = Left(sNewName, InStr(sNewName, sVer) - 1)
+
+' If doc has an incremental version number, strip out the incremental portion, then set sNewName as next integer version
+If InStrRev(sVer, ".") >= 1 Then
+    verBeforeDot = Left(sVer, InStrRev(sVer, ".") - 1)
+    sNewName = sDocTitle & Format(verBeforeDot + 1, "00")
+Else
+    sNewName = Replace(sNewName, sVer, Format(sVer + 1, "00"))
+End If
+sNewName = Mid(sNewName, InStrRev(sNewName, "\") + 1)
+
+' Prompt for who created this document version
+Dim Drafter As String
+Drafter = InputBox("Whose draft is this?  E.g. 'Seller' or 'Tenant'", "Drafter")
+If Drafter = "" Then Exit Sub
+
+' Name doc using existing spacing and quirks
+If InStrRev(lastInSeq, " (") > 0 Then
+    newFilename = sNewName & " (" & Drafter & Chr(32) & sDate & ")"
+Else
+    newFilename = sNewName & "(" & Drafter & Chr(32) & sDate & ")"
+End If
+
+' Save document in folder where lastInSeq lives
+With Application.Dialogs(wdDialogFileSaveAs)
+    .Name = sPath & newFilename
+    .Show
+End With
+
+FilePath.UpdatePathMacro
+
+lbl_Exit:
+    Exit Sub
+    
+    'Error Handler
+'NotSavedYet:
+'    MsgBox "This file has not been initially saved. " & _
+'           "Cannot save a new version!", vbCritical, "Not Saved To Computer"    '
+'    GoTo lbl_Exit
+
+End Sub
+
+Private Function DateFormat(sName As String) As String
+' ©Graham Mayor - https://www.gmayor.com - Last updated - 04 Apr 2021
+Dim sDate As String
+sDate = Right(sName, Len(sName) - InStrRev(sName, "(") + 1)
+    If InStr(1, sDate, "(") > 0 Then
+        sDate = Split(sDate, "(")(1)
+        sDate = Split(sDate, " ")(1)
+        sDate = Split(sDate, ")")(0)
+        If InStr(1, sDate, ".") > 0 Then
+            DateFormat = "mm.dd.yy" 'note lower case!
+        Else
+            DateFormat = "mmddyy"
+        End If
+    Else
+        DateFormat = "mm.dd.yy"
+    End If
+End Function
+
+Private Function onlyDigits(s As String) As String
+'https://stackoverflow.com/questions/7239328/how-to-find-numbers-from-a-string#7239408
+'modified by Graham Mayor - https://www.gmayor.com - Last updated - 04 Apr 2021
+' Variables needed (remember to use "option explicit").   '
+Dim retval As String    ' This is the return string for the version number.      '
+Dim i As Integer        ' Counter for character position. '
+
+' Initialise return string to empty                       '
+    retval = ""
+
+    ' For every character in input string, copy digits to     '
+    '   return string.                                        '
+    For i = 1 To Len(s)
+        If Mid(s, i, 1) >= "0" And Mid(s, i, 1) <= "9" Or Mid(s, i, 1) = "." Then
+            retval = retval + Mid(s, i, 1)
+        End If
+    Next
+
+    ' Then return the return string.                          '
+    onlyDigits = retval
+       
+    
+End Function
+
+
+
+-------------------------------------------------------------------------------
+VBA MACRO RibbonControl.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/RibbonControl'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Option Explicit
+Public MyRibbon As IRibbonUI
+Public SummaryCheckboxValue As Boolean ' A variable to hold the checkbox status
+
+
+Sub RibbonOnLoad(ribbon As IRibbonUI)
+    'Create a ribbon instance for use in this project
+    Set MyRibbon = ribbon
+    SummaryCheckboxValue = True
+End Sub
+
+Sub MyBtnMacro(ByVal control As IRibbonControl)
+Select Case control.ID
+    Case Is = "MakeDef"
+        MakeDefinition.MakeDefinition
+    Case Is = "BoldDefTerms"
+        BoldDefinedTerms.BoldDefinedTerms
+    Case Is = "CrossRef"
+        ConvertToCrossRef.ConvertToCrossRef
+    Case Is = "HowDefined"
+        TermDefined.FindDef
+    Case Is = "RmvLnBrks"
+        RemoveLineBreaks.RemoveLineBreaks
+    Case Is = "NxtSnt"
+        StepThroughSentences.StepRightSentence
+    Case Is = "FilePath"
+        FilePath.FilePathMacro
+    Case Is = "FastCompare"
+        FastCompare.FastCompare
+    Case Is = "FKSDOSave"
+        FKSDOSaveAs.SaveAsFKSDOFile
+    Case Is = "SaveNewVer"
+        FKSDONewVersion.SaveNewVersion_Word
+    Case Is = "SaveInSeq"
+        FKSDOSaveInSequence.SaveInSequence
+    Case Is = "HighlightTerm"
+        HilightTerm.HighlightSelectedTerm
+    Case Is = "BigHighlightTerm"
+        HilightTerm.HighlightSelectedTerm
+    Case Is = "UnhighlightTerm"
+        HilightTerm.UnHighlightSelectedTerm
+    Case Is = "HighlightBrackets"
+        HighlightBrackets.HighlightBrackets
+    Case Is = "CopyToForms"
+        CopyToForms.CopyToForms
+    Case Is = "NumeralsOnly"
+        NumeralsOnly.NumeralsOnly
+    Case Is = "FKSDONote"
+        FKSDONote.FKSDONoteMacro
+    Case Is = "PrintChangePages"
+        PrintChangePages.PrintOnlyMarkupPages
+    Case Is = "DontAddSpace"
+        DontAddSpace.DontAddSpaceMacro
+    Case Is = "UpdatePath"
+        FilePath.UpdatePathMacro
+    Case Is = "NewIncremental"
+        FKSDONewIncremental.SaveNewIncremental
+    Case Is = "EmailDoc"
+        EmailDocument.EmailDocumentMacro
+    Case Is = "OpenFolder"
+        FilePath.OpenFolder
+    Case Is = "MTKFastCompare"
+        FastCompare.MTKFastCompare
+        
+End Select
+End Sub
+
+
+'Callback for DropDown onAction
+Sub myDDMacro(ByVal control As IRibbonControl, selectedID As String, _
+               selectedIndex As Integer)
+Select Case selectedIndex
+  Case 1
+    Macros.Macro1
+  Case 2
+    Macros.Macro2
+  Case 3
+    Macros.Macro3
+End Select
+'Force the ribbon to restore the control to original state
+MyRibbon.InvalidateControl control.ID
+End Sub
+'Callback for DropDown GetItemCount
+Sub GetItemCount(ByVal control As IRibbonControl, ByRef count)
+count = 4
+End Sub
+'Callback for DropDown GetItemLabel
+Sub GetItemLabel(ByVal control As IRibbonControl, _
+    Index As Integer, ByRef label)
+label = Choose(Index + 1, "Select from list", "Macro 1", "Macro 2", "Macro 3")
+End Sub
+'Callback DropDown GetSelectedIndex
+Sub GetSelectedItemIndex(ByVal control As IRibbonControl, ByRef Index)
+'This procedure is used to ensure the first item in the dropdown is displayed.
+Select Case control.ID
+  Case Is = "DD1"
+    Index = 0
+  Case Else
+End Select
+End Sub
+'Callback for Button onAction
+
+'Callback for Toggle onAction
+Sub ToggleonAction(control As IRibbonControl, pressed As Boolean)
+Select Case control.ID
+  Case Is = "TB1"
+    ActiveWindow.View.ShowBookmarks = Not ActiveWindow.View.ShowBookmarks
+  Case Is = "TB2"
+  'Note:  "pressed" returns the toggle state.  So we could use this instead.
+    If pressed Then
+      ActiveWindow.View.ShowHiddenText = False
+    Else
+      ActiveWindow.View.ShowHiddenText = True
+    End If
+    If Not ActiveWindow.View.ShowHiddenText Then
+      ActiveWindow.View.ShowAll = False
+    End If
+End Select
+'Force the ribbon to redefine the control wiht correct image and label
+MyRibbon.InvalidateControl (control.ID)
+End Sub
+'Callback for togglebutton getLabel
+Sub getLabel(control As IRibbonControl, ByRef returnedVal)
+Select Case control.ID
+  Case Is = "TB1"
+    If Not ActiveWindow.View.ShowBookmarks Then
+      returnedVal = "Show Bookmarks"
+    Else
+      returnedVal = "Hide Bookmarks"
+    End If
+  Case Is = "TB2"
+    If Not ActiveWindow.View.ShowHiddenText Then
+      returnedVal = "Show Text"
+    Else
+      returnedVal = "Hide Text"
+    End If
+End Select
+End Sub
+'Callback for togglebutton getImage
+Sub GetImage(control As IRibbonControl, ByRef returnedVal)
+Select Case control.ID
+  Case Is = "TB1"
+   If ActiveWindow.View.ShowBookmarks Then
+      returnedVal = "_3DTiltRightClassic"
+    Else
+      returnedVal = "_3DTiltLeftClassic"
+   End If
+  Case Is = "TB2"
+    If ActiveWindow.View.ShowHiddenText Then
+      returnedVal = "WebControlHidden"
+    Else
+      returnedVal = "SlideShowInAWindow"
+    End If
+End Select
+End Sub
+'Callback for togglebutton getPressed
+Sub buttonPressed(control As IRibbonControl, ByRef toggleState)
+'toggleState is used tp set the toggle state (i.e., true or false) and determine how the
+'toggle appears on the ribbon (i.e., flusn or sunken).
+Select Case control.ID
+  Case Is = "TB1"
+    If Not ActiveWindow.View.ShowBookmarks Then
+      toggleState = True
+    Else
+      toggleState = False
+    End If
+  Case Is = "TB2"
+    If Not ActiveWindow.View.ShowHiddenText Then
+      toggleState = True
+    Else
+      toggleState = False
+    End If
+End Select
+End Sub
+
+
+' This function is called when the UI is invalidated. It will return the current status of the checkbox.
+Public Sub IncludeSummary_getPressed(control As IRibbonControl, ByRef returnedVal)
+  If control.ID = "IncludeSummary_Checkbox" Then
+    returnedVal = SummaryCheckboxValue
+  End If
+End Sub
+
+' This function is called when the checkbox is clicked. It toggles the value of the checkbox.
+Public Sub IncludeSummary_onAction(control As IRibbonControl, pressed As Boolean)
+
+    If control.ID = "IncludeSummary_Checkbox" Then
+        SummaryCheckboxValue = pressed
+        ' Invalidate the UI so that the IncludeSummary_getPressed function is called
+    If Not MyRibbon Is Nothing Then
+            MyRibbon.Invalidate
+        End If
+        ' Now you can use the value of SummaryCheckboxValue in your macro to determine its functionality
+  End If
+End Sub
+
+-------------------------------------------------------------------------------
+VBA MACRO RemoveHighlight.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/RemoveHighlight'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Sub RemoveHighlight()
+Selection.Range.HighlightColorIndex = wdNoHighlight
+End Sub
+-------------------------------------------------------------------------------
+VBA MACRO ConvertToCrossRef.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/ConvertToCrossRef'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Option Explicit
+
+Sub ConvertToCrossRef()
+
+    Dim RefList As Variant
+    Dim LookUp As String
+    Dim Ref As String
+    Dim s As Integer, t As Integer
+    Dim i As Integer
+    Dim oRng As Range
+    Dim oRngStr As String
+    Dim spaceAfter As Boolean
+
+    On Error GoTo ErrExit
+    Set oRng = Selection.Range
+    oRngStr = Selection.Range.text
+
+    If oRng.Characters(Len(oRngStr)) = Chr(32) Then spaceAfter = True
+
+    With oRng
+        .MoveEndWhile Chr(32), wdBackward
+        .MoveStartWhile Chr(32)
+        ' discard leading blank spaces
+        Do While (Asc(.text) = 32) And (.End > .Start)
+            .MoveStart wdCharacter
+        Loop
+        ' discard trailing blank spaces, full stops and CRs
+        Do While ((Asc(Right(.text, 1)) = 46) Or _
+            (Asc(Right(.text, 1)) = 32) Or _
+            (Asc(Right(.text, 1)) = 11) Or _
+            (Asc(Right(.text, 1)) = 13)) And _
+            (.End > .Start)
+            .MoveEnd wdCharacter, -1
+        Loop
+
+ErrExit:
+        If Len(.text) = 0 Then
+            MsgBox "Please select a reference.", _
+            vbExclamation, "Invalid selection"
+            Exit Sub
+        End If
+
+        LookUp = .text
+    End With
+    On Error GoTo 0
+
+    With ActiveDocument
+        ' Use WdRefTypeHeading to retrieve Headings
+        RefList = .GetCrossReferenceItems(wdRefTypeNumberedItem)
+        For i = UBound(RefList) To 1 Step -1
+            Ref = Trim(RefList(i))
+            If InStr(1, Ref, LookUp, vbTextCompare) = 1 Then
+                s = InStr(2, Ref, " ")
+                t = InStr(2, Ref, Chr(9))
+                If (s = 0) Or (t = 0) Then
+                    s = IIf(s > 0, s, t)
+                Else
+                    s = IIf(s < t, s, t)
+                End If
+                If LookUp = Left(Ref, s - 1) Then Exit For
+            End If
+        Next i
+
+        If i Then
+            Selection.InsertCrossReference ReferenceType:="Numbered item", _
+            ReferenceKind:=wdNumberFullContext, _
+            ReferenceItem:=CStr(i), _
+            InsertAsHyperlink:=True, _
+            IncludePosition:=False, _
+            SeparateNumbers:=False, _
+            SeparatorString:=" "
+            If spaceAfter = True Then Selection.Range.InsertAfter (Chr(32))
+        Else
+            MsgBox "A cross reference to """ & LookUp & """ couldn't be set" & vbCr & _
+            "because a paragraph with that number couldn't" & vbCr & _
+            "be found in the document.", _
+            vbInformation, "Invalid cross reference"
+        End If
+    End With
+End Sub
+
+-------------------------------------------------------------------------------
+VBA MACRO ChatGPT.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/ChatGPT'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Option Explicit
+
+' This is a macro that will communicate with the ChatGPT API in Microsoft Word.
+'
+'Just copy/paste this macro into Word following instructions in the Readme.md file.
+' Don't forget to change the API key to your own.
+' Author: Johann Dowa
+' http://github.com/jddev273/chatgpt-word-macro
+
+Function UnescapeString(ByVal str As String) As String
+    Dim i As Integer
+    Dim output As String
+    For i = 1 To Len(str)
+        If Mid(str, i, 2) = "\\" Then
+            output = output & "\"
+            i = i + 1
+        ElseIf Mid(str, i, 2) = "\/" Then
+            output = output & "/"
+            i = i + 1
+        ElseIf Mid(str, i, 2) = "\n" Then
+            output = output & vbCrLf
+            i = i + 1
+        ElseIf Mid(str, i, 2) = "\r" Then
+            output = output & vbCr
+            i = i + 1
+        ElseIf Mid(str, i, 2) = "\t" Then
+            output = output & vbTab
+            i = i + 1
+        ElseIf Mid(str, i, 2) = "\" & Chr(34) Then
+            output = output & """"
+            i = i + 1
+        Else
+            output = output & Mid(str, i, 1)
+        End If
+    Next i
+    UnescapeString = output
+End Function
+
+Sub ChatGPT()
+    '
+    ' ChatGPT Macro
+    '
+    
+    Dim apiUrl As String
+    Dim requestPayload As String
+    Dim apiKey As String
+    Dim httpRequest As Object
+    Dim responseText As String
+    Dim content As String
+    Dim startIndex As Integer
+    Dim endIndex As Integer
+    Dim startPos As Long
+    Dim endPos As Long
+    Dim oText As String
+    
+    content = InputBox("Enter the prompt for ChatGPT.", "Content")
+    
+    apiUrl = "https://api.openai.com/v1/chat/completions"
+    apiKey = "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"
+    requestPayload = "{""model"":""gpt-3.5-turbo-0301"",""messages"":[{""role"":""user"",""content"":""" & content & """}]}"
+    
+    Set httpRequest = CreateObject("WinHttp.WinHttpRequest.5.1")
+    httpRequest.Open "POST", apiUrl, False
+    httpRequest.setRequestHeader "Content-Type", "application/json"
+    httpRequest.setRequestHeader "Authorization", "Bearer " & apiKey
+    On Error Resume Next
+    httpRequest.send requestPayload
+    On Error GoTo 0
+    
+    If httpRequest.Status <> 200 Then
+        MsgBox "Error: " & httpRequest.Status & " " & httpRequest.StatusText
+        Exit Sub
+    End If
+        
+    responseText = httpRequest.responseText
+    startPos = InStr(responseText, """content"":""") + 11
+    endPos = InStr(responseText, """},""") - 1
+
+    responseText = Trim(UnescapeString(Mid(responseText, startPos, endPos - startPos + 1)))
+   MsgBox (responseText)
+   ' Selection.HomeKey wdStory
+   Selection.TypeText responseText
+    
+    Set httpRequest = Nothing
+    
+
+End Sub
+
+Public Function RemoveNonASCII(inputStr As String) As String
+    Dim outputStr As String
+    Dim char As String
+    Dim i As Integer
+
+    For i = 1 To Len(inputStr)
+        char = Mid(inputStr, i, 1)
+        If Asc(char) >= 32 And Asc(char) <= 126 Then
+            outputStr = outputStr & char
+        End If
+    Next i
+
+    RemoveNonASCII = outputStr
+End Function
+
+Sub ASCIIfi_Document_Hide()
+Application.ScreenUpdating = False
+Dim i As Long
+With ActiveDocument.Range
+  .Font.Hidden = True
+  For i = 1 To 255
+    With .Find
+      .ClearFormatting
+      .Replacement.ClearFormatting
+      .text = Chr(i)
+      .Replacement.text = "^&"
+      .Font.Hidden = True
+      .Replacement.Font.Hidden = False
+      .Forward = True
+      .Format = True
+      .MatchWildcards = False
+      .Wrap = wdFindContinue
+      .Execute Replace:=wdReplaceAll
+    End With
+    DoEvents
+  Next
+  .Fields.Update
+  DoEvents
+End With
+Application.ScreenUpdating = True
+End Sub
+
+Function CleanText(text As String) As String
+    ' Remove control characters and escape double quotes
+    Dim result As String
+    Dim i As Long
+    For i = 1 To Len(text)
+        Dim ch As String
+        ch = Mid(text, i, 1)
+        If Asc(ch) >= 32 And Asc(ch) <> 127 Then ' non-control character
+            If ch = """" Then
+                result = result & "\"""
+            Else
+                result = result & ch
+            End If
+        End If
+    Next i
+    CleanText = result
+End Function
+
+-------------------------------------------------------------------------------
+VBA MACRO ChatGPTRedlineExperiment.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/ChatGPTRedlineExperiment'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Option Explicit
+
+
+
+' This is a macro that will communicate with the ChatGPT API in Microsoft Word.
+'
+'Just copy/paste this macro into Word following instructions in the Readme.md file.
+' Don't forget to change the API key to your own.
+' Author: Johann Dowa
+' http://github.com/jddev273/chatgpt-word-macro
+
+Function UnescapeString(ByVal str As String) As String
+    Dim i As Integer
+    Dim output As String
+    For i = 1 To Len(str)
+        If Mid(str, i, 2) = "\\" Then
+            output = output & "\"
+            i = i + 1
+        ElseIf Mid(str, i, 2) = "\/" Then
+            output = output & "/"
+            i = i + 1
+        ElseIf Mid(str, i, 2) = "\n" Then
+            output = output & vbCrLf
+            i = i + 1
+        ElseIf Mid(str, i, 2) = "\r" Then
+            output = output & vbCr
+            i = i + 1
+        ElseIf Mid(str, i, 2) = "\t" Then
+            output = output & vbTab
+            i = i + 1
+        ElseIf Mid(str, i, 2) = "\" & Chr(34) Then
+            output = output & """"
+            i = i + 1
+        Else
+            output = output & Mid(str, i, 1)
+        End If
+    Next i
+    UnescapeString = output
+End Function
+
+Sub ChatGPTRedline()
+    '
+    ' ChatGPT Macro
+    '
+    
+    Dim apiUrl As String
+    Dim requestPayload As String
+    Dim apiKey As String
+    Dim httpRequest As Object
+    Dim responseText As String
+    Dim content As String
+    Dim startIndex As Integer
+    Dim endIndex As Integer
+    Dim startPos As Long
+    Dim endPos As Long
+    Dim Prompt As String
+    Dim oSelect As Selection
+    
+    Application.ScreenUpdating = False
+    
+    content = Selection.Range.text
+    If Len(content) < 60 Then
+        MsgBox ("Looks like you didn't select enough actual verbiage.  Try again")
+        Exit Sub
+    End If
+    Prompt = "Act as a lawyer revising a contract. Revise this clause assuming you represent the party opposing the party who drafted the clause." & _
+             "You should revise the langauge directly without commentary. Respond with the entire revised clause (not just the added or deleted portions). Take an aggressive stance." & _
+             "Do not include linebreaks in your response.  Mark added langage like this 'ADD;;[NEW TEXT HERE];;ENDADD' and mark deleted language like this" & _
+             "'DEL;;[DELETED TEXT HERE];;ENDDEL.' The clause is as follows:  "
+    
+    'cleaning
+    content = RemoveNonASCII(content)  'ChatGPT only accepts ASCII content, so call the function that removes non-ASCII characters.
+    content = Replace(content, Chr(34), Chr(39)) 'replace double quotes and smart quotes with single quote to avoid errors
+    content = Replace(content, ChrW$(8220), Chr(39))
+    content = Replace(content, ChrW$(8221), Chr(39))
+
+    apiUrl = "https://api.openai.com/v1/chat/completions"
+    apiKey = "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"
+    requestPayload = "{""model"":""gpt-3.5-turbo"",""messages"":[{""role"":""user"",""content"":""" & Prompt & content & """}]}"
+    Debug.Print Prompt & content
+    'Debug.Print requestPayload
+
+    Set httpRequest = CreateObject("WinHttp.WinHttpRequest.5.1")
+    httpRequest.Open "POST", apiUrl, False
+    httpRequest.setRequestHeader "Content-Type", "application/json"
+    httpRequest.setRequestHeader "Authorization", "Bearer " & apiKey
+    On Error Resume Next
+    httpRequest.send requestPayload
+    On Error GoTo 0
+
+    If httpRequest.Status <> 200 Then
+        MsgBox "Error: " & httpRequest.Status & " " & httpRequest.StatusText
+        Exit Sub
+    End If
+
+    responseText = httpRequest.responseText
+    startPos = InStr(responseText, """content"":""") + 11
+    endPos = InStr(responseText, """},""") - 1
+    Debug.Print responseText
+
+    responseText = Trim(UnescapeString(Mid(responseText, startPos, endPos - startPos + 1)))
+    'MsgBox (responseText)
+    ActiveDocument.TrackRevisions = False
+    Debug.Print responseText
+    
+    Set oSelect = Selection
+    Selection.TypeText responseText
+    
+    ' The following (from ChatGPT itself) will find {{additions}} and ^^deletions^^ and convert them into track changes.
+    Dim oDoc As Document
+    Dim sFindText As String
+    Dim sReplaceText As String
+    Dim sPlaceholder As String
+    
+    ' Set active document
+    Set oDoc = ActiveDocument
+
+    ' Turn off ScreenUpdating
+    Application.ScreenUpdating = False
+
+    ' Create a new RegExp object
+    Dim regEx As Object
+    Set regEx = CreateObject("VBScript.RegExp")
+    
+ ' Find text in ADD;; and ;;ENDADD and remove the markers
+    With regEx
+        .Global = True
+        .MultiLine = True
+        .IgnoreCase = False
+        .Pattern = "ADD;;(.*?);;ENDADD"
+        
+        Dim matches As Object
+        Set matches = .Execute(responseText)
+        
+        Dim match As Variant
+        For Each match In matches
+            sFindText = match.Value
+            sPlaceholder = "INSERTION GOES HERE"
+                        
+            ' Delete the text where it is found so that it can be reinserted as track changes
+            oDoc.content.Find.Execute findText:=sFindText, ReplaceWith:=sPlaceholder, Replace:=wdReplaceOne, MatchCase:=True
+            ' Turn on Track Changes and reinsert without the markers
+            sReplaceText = Mid(sFindText, 6, Len(sFindText) - 13) 'Delete ADD;; and ;;ENDADD
+            oDoc.TrackRevisions = True
+            ' Replace the found text in the document
+            oDoc.content.Find.Execute findText:=sPlaceholder, ReplaceWith:=sReplaceText, Replace:=wdReplaceOne, MatchCase:=True
+
+            oDoc.TrackRevisions = False
+        Next match
+    End With
+    oDoc.content.Find.Execute findText:=sPlaceholder, ReplaceWith:="", Replace:=wdReplaceAll, MatchCase:=True
+
+    ' Find text in DEL;; and ;;ENDDEL and delete it
+    With regEx
+        .Pattern = "DEL;;(.*?);;ENDDEL"
+        
+        Set matches = .Execute(responseText)
+        
+        For Each match In matches
+            sFindText = match.Value
+            
+            ' Delete the found text in the document
+            oDoc.TrackRevisions = True
+            oDoc.content.Find.Execute findText:=sFindText, ReplaceWith:="", Replace:=wdReplaceAll
+        Next match
+    End With
+
+    ' Turn off Track Changes
+    oDoc.TrackRevisions = False
+
+    ' Turn on ScreenUpdating
+    Application.ScreenUpdating = True
+
+    ' Find and delete the custom markers returned by ChatGPT
+    ' Array of special strings to delete
+    Dim specialStrings() As Variant
+    Dim stringIndex As Integer
+    specialStrings = Array("ADD;;", ";;ENDADD", "DEL;;", ";;ENDDEL")
+        For stringIndex = LBound(specialStrings) To UBound(specialStrings)
+        With oDoc.content.Find
+            .text = specialStrings(stringIndex)
+            .Replacement.text = ""
+            .Forward = True
+            .Wrap = wdFindContinue
+            .Format = False
+            .MatchCase = True
+            .MatchWholeWord = False
+            .MatchWildcards = False
+            .MatchSoundsLike = False
+            .MatchAllWordForms = False
+            .Execute Replace:=wdReplaceAll
+        End With
+    Next stringIndex
+
+    ' Turn on ScreenUpdating
+    Application.ScreenUpdating = True
+
+End Sub
+
+Sub UpdateText()
+
+    Dim responseText As String
+    Dim oDoc As Document
+    Dim sFindText As String
+    Dim sReplaceText As String
+    
+    ' Your responseText here
+    responseText = Selection.text
+
+        
+    ' Set active document
+    Set oDoc = ActiveDocument
+
+    ' Turn off ScreenUpdating
+    Application.ScreenUpdating = False
+
+    ' Turn on Track Changes
+    oDoc.TrackRevisions = True
+    
+    ' Create a new RegExp object
+    Dim regEx As Object
+    Set regEx = CreateObject("VBScript.RegExp")
+    
+    ' Find text in ADD;; and ;;ENDADD and remove the markers
+    With regEx
+        .Global = True
+        .MultiLine = True
+        .IgnoreCase = False
+        .Pattern = "ADD;;(.*?);;ENDADD"
+        
+        Dim matches As Object
+        Set matches = .Execute(responseText)
+        
+        Dim match As Variant
+        For Each match In matches
+            sFindText = match.Value
+            sReplaceText = Mid(sFindText, 5, Len(sFindText) - 11)
+            
+            ' Replace the found text in the document
+            oDoc.content.Find.Execute findText:=sFindText, ReplaceWith:=sReplaceText, Replace:=wdReplaceAll, MatchCase:=True
+        Next match
+    End With
+    
+    ' Find text in DEL;; and ;;ENDDEL and delete it
+    With regEx
+        .Pattern = "DEL;;(.*?);;ENDDEL"
+        
+        Set matches = .Execute(responseText)
+        
+        For Each match In matches
+            sFindText = match.Value
+            
+            ' Delete the found text in the document
+            oDoc.content.Find.Execute findText:=sFindText, ReplaceWith:="", Replace:=wdReplaceAll
+        Next match
+    End With
+
+    ' Turn off Track Changes
+    oDoc.TrackRevisions = False
+
+    ' Turn on ScreenUpdating
+    Application.ScreenUpdating = True
+
+End Sub
+
+-------------------------------------------------------------------------------
+VBA MACRO ChatGPT_Suggestions.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/ChatGPT_Suggestions'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Option Explicit
+
+
+
+' This is a macro that will communicate with the ChatGPT API in Microsoft Word.
+'
+'Just copy/paste this macro into Word following instructions in the Readme.md file.
+' Don't forget to change the API key to your own.
+' Author: Johann Dowa
+' http://github.com/jddev273/chatgpt-word-macro
+
+Function UnescapeString(ByVal str As String) As String
+    Dim i As Integer
+    Dim output As String
+    For i = 1 To Len(str)
+        If Mid(str, i, 2) = "\\" Then
+            output = output & "\"
+            i = i + 1
+        ElseIf Mid(str, i, 2) = "\/" Then
+            output = output & "/"
+            i = i + 1
+        ElseIf Mid(str, i, 2) = "\n" Then
+            output = output & vbCrLf
+            i = i + 1
+        ElseIf Mid(str, i, 2) = "\r" Then
+            output = output & vbCr
+            i = i + 1
+        ElseIf Mid(str, i, 2) = "\t" Then
+            output = output & vbTab
+            i = i + 1
+        ElseIf Mid(str, i, 2) = "\" & Chr(34) Then
+            output = output & """"
+            i = i + 1
+        Else
+            output = output & Mid(str, i, 1)
+        End If
+    Next i
+    UnescapeString = output
+End Function
+
+Sub ChatGPT_Suggestions()
+    '
+    ' ChatGPT Macro
+    '
+    
+    Dim apiUrl As String
+    Dim requestPayload As String
+    Dim apiKey As String
+    Dim httpRequest As Object
+    Dim responseText As String
+    Dim content As String
+    Dim startIndex As Integer
+    Dim endIndex As Integer
+    Dim startPos As Long
+    Dim endPos As Long
+    Dim oText As String
+    Dim Prompt As String
+    
+    
+    content = Selection.Range.text
+    If Len(content) < 60 Then
+        MsgBox ("Looks like you didn't select enough actual verbiage.  Try again")
+        Exit Sub
+    End If
+    Prompt = "I am a lawyer revising a contract. I represent the party that is opposite the party that wrote the clause below." & _
+             "Suggest in a few bullet points how I should revise this clause.  Take an aggressive stance. "
+             '"If you feel confident in your answer, you should revise the langauge directly." & _
+             '"If you do revise thelanguage, mark added langage like this 'ADD;;[NEW TEXT HERE];;ENDADD' and mark deleted language like this" & _
+             '"'DEL;;[DELETED TEXT HERE];;ENDDEL.' The clause is as follows:  "
+             
+    'cleaning
+    content = RemoveNonASCII(content)  'ChatGPT only accepts ASCII content, so call the function that removes non-ASCII characters.
+    content = Replace(content, Chr(34), Chr(39)) 'replace double quotes and smart quotes with single quote to avoid errors
+    content = Replace(content, ChrW$(8220), Chr(39))
+    content = Replace(content, ChrW$(8221), Chr(39))
+    
+    apiUrl = "https://api.openai.com/v1/chat/completions"
+    apiKey = "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"
+    requestPayload = "{""model"":""gpt-3.5-turbo-0301"",""messages"":[{""role"":""user"",""content"":""" & Prompt & content & """}]}"
+    
+    Set httpRequest = CreateObject("WinHttp.WinHttpRequest.5.1")
+    httpRequest.Open "POST", apiUrl, False
+    httpRequest.setRequestHeader "Content-Type", "application/json"
+    httpRequest.setRequestHeader "Authorization", "Bearer " & apiKey
+    On Error Resume Next
+    httpRequest.send requestPayload
+    On Error GoTo 0
+    
+    If httpRequest.Status <> 200 Then
+        MsgBox "Error: " & httpRequest.Status & " " & httpRequest.StatusText
+        Exit Sub
+    End If
+        
+    responseText = httpRequest.responseText
+    startPos = InStr(responseText, """content"":""") + 11
+    endPos = InStr(responseText, """},""") - 1
+
+    responseText = Trim(UnescapeString(Mid(responseText, startPos, endPos - startPos + 1)))
+    MsgBox (responseText)
+    Dim sClipText As New DataObject
+    sClipText.SetText responseText 'weirdly difficult to copy a string to the clipboard
+    sClipText.PutInClipboard
+    
+        
+    Set httpRequest = Nothing
+    
+
+End Sub
+
+Public Function RemoveNonASCII(inputStr As String) As String
+    Dim outputStr As String
+    Dim char As String
+    Dim i As Integer
+
+    For i = 1 To Len(inputStr)
+        char = Mid(inputStr, i, 1)
+        If Asc(char) >= 32 And Asc(char) <= 126 Then
+            outputStr = outputStr & char
+        End If
+    Next i
+
+    RemoveNonASCII = outputStr
+End Function
+
+Sub ASCIIfi_Document_Hide()
+Application.ScreenUpdating = False
+Dim i As Long
+With ActiveDocument.Range
+  .Font.Hidden = True
+  For i = 1 To 255
+    With .Find
+      .ClearFormatting
+      .Replacement.ClearFormatting
+      .text = Chr(i)
+      .Replacement.text = "^&"
+      .Font.Hidden = True
+      .Replacement.Font.Hidden = False
+      .Forward = True
+      .Format = True
+      .MatchWildcards = False
+      .Wrap = wdFindContinue
+      .Execute Replace:=wdReplaceAll
+    End With
+    DoEvents
+  Next
+  .Fields.Update
+  DoEvents
+End With
+Application.ScreenUpdating = True
+End Sub
+
+Function CleanText(text As String) As String
+    ' Remove control characters and escape double quotes
+    Dim result As String
+    Dim i As Long
+    For i = 1 To Len(text)
+        Dim ch As String
+        ch = Mid(text, i, 1)
+        If Asc(ch) >= 32 And Asc(ch) <> 127 Then ' non-control character
+            If ch = """" Then
+                result = result & "\"""
+            Else
+                result = result & ch
+            End If
+        End If
+    Next i
+    CleanText = result
+End Function
+
+
+-------------------------------------------------------------------------------
+VBA MACRO MTKFinder.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/MTKFinder'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+
+Sub MTKFinder()
+
+Dim StrFind As String
+Dim StrRepl As String
+Dim i As Long
+
+' In StrFind and StrRepl, add words between the quote marks, separate with a comma, NO spaces
+' To only highlight the found words (i.e. not replace with other words), either use StrRepl = StrFind OR use the SAME words in the same order in the StrRepl list as for the StrFind list; comment/uncomment to reflect the one you're using
+' To replace a word with another and highlight it, put the new word in the StrRepl list in the SAME position as the word in the StrFind list you want to replace; comment/uncomment to reflect the one you're using
+
+StrFind = "(the,(collectively,(1,(2,(3,(4,(5,(6,(7,(8,(9,($,latter,earlier,day of,"
+StrRepl = StrFind
+Set RngTxt = Selection.Range
+
+' Set highlight color - options are listed here: https://docs.microsoft.com/en-us/office/vba/api/word.wdcolorindex
+' main ones are wdYellow, wdTurquoise, wdBrightGreen, wdPink
+Options.DefaultHighlightColorIndex = wdBrightGreen
+
+Selection.HomeKey wdStory
+
+' Clear existing formatting and settings in Find and Replace fields
+    Selection.Find.ClearFormatting
+    Selection.Find.Replacement.ClearFormatting
+
+With ActiveDocument.content.Find
+  .Format = True
+  .MatchWholeWord = False
+  .MatchAllWordForms = False
+  .MatchWildcards = False
+  .Wrap = wdFindContinue
+  .Forward = True
+  For i = 0 To UBound(Split(StrFind, ","))
+    .text = Split(StrFind, ",")(i)
+    .Replacement.Highlight = True
+    .Replacement.text = Split(StrRepl, ",")(i)
+    .Execute Replace:=wdReplaceAll
+  Next i
+End With
+End Sub
+
+Sub MTKTheFinder()
+
+Dim StrFind As String
+Dim StrRepl As String
+Dim i As Long
+
+'Simplified version of MTK Finder, but only for "(the "[definition])" errors
+
+StrFind = "(the """
+StrRepl = StrFind
+Set RngTxt = Selection.Range
+
+Options.DefaultHighlightColorIndex = wdBrightGreen
+
+Selection.HomeKey wdStory
+
+' Clear existing formatting and settings in Find and Replace fields
+    Selection.Find.ClearFormatting
+    Selection.Find.Replacement.ClearFormatting
+
+With ActiveDocument.content.Find
+  .Format = True
+  .MatchWholeWord = False
+  .MatchAllWordForms = False
+  .MatchWildcards = False
+  .Wrap = wdFindContinue
+  .Forward = True
+  .text = StrFind
+  .Replacement.Highlight = True
+  .Replacement.text = StrFind
+  .Execute Replace:=wdReplaceAll
+End With
+End Sub
+-------------------------------------------------------------------------------
+VBA MACRO RemoveManualNumbers.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/RemoveManualNumbers'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Option Explicit
+
+
+Sub RemoveManualNumbersAndDoubleSpace()
+    Dim i As Long
+    Dim para As Paragraph
+    
+    Application.ScreenUpdating = False
+    WordBasic.ToolsBulletsNumbers Replace:=0, Type:=1, Remove:=1
+    With Selection.Range.Find
+        .text = "^p^p"
+        .Replacement.text = "^p"
+        .MatchWildcards = False
+        .Execute Replace:=wdReplaceAll
+    End With
+    For Each para In Selection.Range.Paragraphs
+        para.Range.Select
+        Selection.Collapse wdCollapseStart
+        If para.Range.Characters(1) = vbTab Then para.Range.Characters(1).Delete
+    Next
+    Application.ScreenUpdating = True
+End Sub
+
+-------------------------------------------------------------------------------
+VBA MACRO PrintChangePages.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/PrintChangePages'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Sub PrintOnlyMarkupPages()
+
+If ActiveDocument.Revisions.count = 0 Then
+    MsgBox "No revisions found."
+    End
+End If
+    Dim strPages As String
+    Dim currpg As String
+    Dim prevpg As String
+    Dim currText As String
+    strPages = "1"
+    prevpg = "1"
+Selection.HomeKey (wdStory)
+For Each myRev In ActiveDocument.Range.Revisions
+    currpg = myRev.Range.Information(Word.WdInformation.wdActiveEndPageNumber)
+    currText = myRev.Range.text
+    If Len(currText) < 10 And "Article" = Left(currText, 7) Then
+        myRev.Accept
+        GoTo nextmyrev
+    ElseIf myRev.FormatDescription <> "" And Left(currText, 1) <> "([0-9]{1,})" Then
+        myRev.Accept
+        GoTo nextmyrev
+    ElseIf myRev.Range.Information(Word.WdInformation.wdInHeaderFooter) _
+        And currpg = "1" Then
+        myRev.Accept
+        GoTo nextmyrev
+    End If
+    If prevpg <> currpg _
+       And Not strPages Like "*" & currpg & "*" _
+       And Not currpg = "1" Then 'add page to list, unless already there
+        strPages = strPages & "," & currpg
+    End If
+nextmyrev:
+prevpg = currpg
+Next myRev
+    'Print
+    With Dialogs(wdDialogFilePrint)
+       .Range = wdPrintRangeOfPages
+       .Pages = strPages
+       .Show
+    End With
+End Sub
+
+-------------------------------------------------------------------------------
+VBA MACRO ApplyHeadingStyles.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/ApplyHeadingStyles'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Sub ChangeCaptionStyle()
+    Dim para        As Word.Paragraph
+    Dim testStyle As Word.Style
+
+    On Error Resume Next
+        Set testStyle = ActiveDocument.Styles("Level 2")
+        If testStyle Is Nothing Then
+            MsgBox "Level 2 is not in the document.  You have to apply Level 2 to the Level 2 sections first."
+            GoTo lbl_End
+        End If
+    On Error GoTo 0
+    
+    For Each para In ActiveDocument.Paragraphs
+        'paracheck = para.Range.Sentences(1)
+        If para.Style = "Level 2" Then
+            para.Range.Sentences(1).Select
+            Selection.Range.Style = "Heading 2 Char"
+        End If
+    Next para
+
+    Set para = Nothing
+lbl_End:
+End Sub
+-------------------------------------------------------------------------------
+VBA MACRO SummaryCheckbox.bas 
+in file: word/vbaProject.bin - OLE stream: 'VBA/SummaryCheckbox'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Option Explicit
+
+-------------------------------------------------------------------------------
+VBA MACRO UserForm1.frm 
+in file: word/vbaProject.bin - OLE stream: 'VBA/UserForm1'
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+Option Explicit
+
+Private Sub UserForm_Click()
+
+End Sub
+VBA Stomping detection is experimental: please report any false positive/negative at https://github.com/decalage2/oletools/issues
+
++----------+--------------------+---------------------------------------------+
+|Type      |Keyword             |Description                                  |
++----------+--------------------+---------------------------------------------+
+|AutoExec  |UserForm_Click      |Runs when the file is opened and ActiveX     |
+|          |                    |objects trigger events                       |
+|Suspicious|Open                |May open a file                              |
+|Suspicious|put                 |May write to a file (if combined with Open)  |
+|Suspicious|output              |May write to a file (if combined with Open)  |
+|Suspicious|CopyFile            |May copy a file                              |
+|Suspicious|Shell               |May run an executable file or a system       |
+|          |                    |command                                      |
+|Suspicious|vbNormalFocus       |May run an executable file or a system       |
+|          |                    |command                                      |
+|Suspicious|run                 |May run an executable file or a system       |
+|          |                    |command                                      |
+|Suspicious|create              |May execute file or a system command through |
+|          |                    |WMI                                          |
+|Suspicious|Call                |May call a DLL using Excel 4 Macros (XLM/XLF)|
+|Suspicious|CreateObject        |May create an OLE object                     |
+|Suspicious|GetObject           |May get an OLE object with a running instance|
+|Suspicious|WINDOWS             |May enumerate application windows (if        |
+|          |                    |combined with Shell.Application object)      |
+|Suspicious|Chr                 |May attempt to obfuscate specific strings    |
+|          |                    |(use option --deobf to deobfuscate)          |
+|Suspicious|ChrW                |May attempt to obfuscate specific strings    |
+|          |                    |(use option --deobf to deobfuscate)          |
+|Suspicious|Hex Strings         |Hex-encoded strings were detected, may be    |
+|          |                    |used to obfuscate strings (option --decode to|
+|          |                    |see all)                                     |
+|Suspicious|Base64 Strings      |Base64-encoded strings were detected, may be |
+|          |                    |used to obfuscate strings (option --decode to|
+|          |                    |see all)                                     |
+|IOC       |https://stackoverflo|URL                                          |
+|          |w.com/questions/7239|                                             |
+|          |328/how-to-find-    |                                             |
+|          |numbers-from-a-     |                                             |
+|          |string#7239408      |                                             |
+|IOC       |https://www.gmayor.c|URL                                          |
+|          |om                  |                                             |
+|IOC       |http://github.com/jd|URL                                          |
+|          |dev273/chatgpt-word-|                                             |
+|          |macro               |                                             |
+|IOC       |https://api.openai.c|URL                                          |
+|          |om/v1/chat/completio|                                             |
+|          |ns                  |                                             |
+|IOC       |https://docs.microso|URL                                          |
+|          |ft.com/en-us/office/|                                             |
+|          |vba/api/word.wdcolor|                                             |
+|          |index               |                                             |
+|IOC       |explorer.exe        |Executable file name                         |
+|Suspicious|VBA Stomping        |VBA Stomping was detected: the VBA source    |
+|          |                    |code and P-code are different, this may have |
+|          |                    |been used to hide malicious code             |
++----------+--------------------+---------------------------------------------+
