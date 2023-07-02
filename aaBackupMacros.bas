@@ -7,10 +7,16 @@ Sub ExportAllModules()
     Dim fso As Object
     Dim templatePath As String
     Dim dateToday As String
+    Dim doc As Document, docName As String
     
     Set fso = CreateObject("scripting.FileSystemObject")
-    templatePath = ActiveDocument.FullName
-    dateToday = Format(Date, "mm.dd.yyyy")
+    
+    
+    Set doc = ActiveDocument
+    doc.Save
+    templatePath = doc.FullName
+    
+    'check that the FKSDOMacros global template is open
     If InStr(templatePath, "STARTUP") = 0 Then
         MsgBox ("Please activate the Global Template and then rerun this.")
         Exit Sub
@@ -24,6 +30,11 @@ Sub ExportAllModules()
         End If
     Next VBComp
     
-    fso.CopyFile Source:=templatePath, Destination:=SaveToDirectory & "templates\" & "FKSDO Macros " & dateToday & ".dotm"
+    'copy the template into the "templates" folder
+    
+    dateToday = " export date " & Format(Date, "mm.dd.yyyy") & ", " & Format(Time, "hh.mm am/pm")
+    docName = Left(doc.Name, InStr(1, doc.Name, ")", vbBinaryCompare))
+    
+    fso.CopyFile Source:=templatePath, Destination:=SaveToDirectory & "templates\" & docName & dateToday & ".dotm"
 End Sub
 

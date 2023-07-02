@@ -30,7 +30,7 @@ End If
 On Error GoTo 0 ' Reset error handler
 
 'Confirm that the user wants to run this redline.
-If MsgBox("Compare to this document?" & vbCr & StrDocOld, vbYesNoCancel) <> vbYes Then GoTo ErrExit
+If MsgBox("Compare to this document?" & vbCr & vbNewLine & StrDocOld, vbYesNoCancel) <> vbYes Then GoTo ErrExit
 
 Set DocOld = Documents.Open(StrDocOld) 'If the formPath variable is set, then use that to open the form.
 
