@@ -12,3 +12,16 @@ Set oRng = Selection.Range
 lbl_Exit:
   Exit Sub
 End Sub
+
+Sub RemoveDoubleLineBreaks()
+
+  With Selection.Find
+     .ClearFormatting
+     .text = "^p^p" ' ^p represents line break
+     .Replacement.ClearFormatting
+     .Replacement.text = "^p" ' replace with a single line break
+     .Execute Replace:=wdReplaceAll, Forward:=True, Wrap:=wdFindContinue
+  End With
+
+End Sub
+
