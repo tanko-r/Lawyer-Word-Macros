@@ -2,14 +2,15 @@ Attribute VB_Name = "MakeDefinition"
 
 Sub MakeDefinition()
     Dim oRng As Range
-    Dim savRng As Range
+    'Dim savRng As Range
     
     Set oRng = Selection.Range
-    Set savRng = Selection.Range
+    'Set savRng = Selection.Range
     If Len(oRng) = 0 Then
         MsgBox "Nothing selected", vbCritical
         GoTo lbl_Exit
     End If
+
     With oRng
         'avoid inadvertently selected spaces at start and end of the selection
         .MoveEndWhile Chr(32), wdBackward
@@ -24,9 +25,12 @@ Sub MakeDefinition()
         .Characters.First.Next.Bold = False
         .Characters.Last.Bold = False
         .Characters.Last.Previous.Bold = False
+        .MoveEnd Unit:=wdCharacter, count:=-2
+        .MoveStart Unit:=wdCharacter, count:=2
     End With
-    savRng.Select
-    Selection.Collapse (wdCollapseEnd)
+    oRng.Select
+    'Selection.Collapse (wdCollapseEnd)
 lbl_Exit:
     Exit Sub
 End Sub
+

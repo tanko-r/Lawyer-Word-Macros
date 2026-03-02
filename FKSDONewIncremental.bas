@@ -20,13 +20,16 @@ Dim verAfterDot As String
     If sPath = "" Then GoTo NotSavedYet
     sPath = sPath & "\"
     sName = ActiveDocument.Name
-    sFormat = DateFormat(sName)
-    sDate = Format(Date, sFormat) 'Format the date
+    'sFormat = DateFormat(sName)
+    sDate = Format(Date, "mm.dd.yy") 'Format the date
     sExt = Right(sName, Len(sName) - InStrRev(sName, ".") + 1)
-    sNewName = Trim(Left(sName, InStrRev(sName, "(") - 1))
+
     sVer = sNewName
     vVer = Split(sVer, Chr(32))
     sVer = onlyDigits(CStr(vVer(UBound(vVer))))
+
+    sNewName = Trim(Left(sName, InStrRev(sName, "(") - 1))
+
 
 ' Find number of digits after "." and find incremental version number, and set verIncremental
 If InStrRev(sVer, ".") >= 1 Then
@@ -49,13 +52,20 @@ If InStrRev(ActiveDocument.Name, " (") > 0 Then
 Else
     newFilename = sNewName & "(" & sInitials & Chr(32) & sDate & ")"
 End If
-Dim vShow As Variant
-With Application.Dialogs(wdDialogFileSaveAs)
-    .Name = ActiveDocument.Path & "\" & newFilename
-    If .Show = 0 Then GoTo lbl_Exit
-End With
 
-FilePath.UpdatePathMacro
+
+'Copy the new filename to the clipboard
+Dim oFilename As DataObject
+Set oFilename = New DataObject
+oFilename.SetText newFilename
+oFilename.PutInClipboard
+
+'Send keys to call the iManage save as new document procedure
+'SendKeys "^+s", True   '--Opens save new document prompt
+'SendKeys "n", True
+'SendKeys "{ENTER}", True
+SendKeys "%4", True    '--Only will work on DSR's computer.
+'user then must manually paste the new filename
 
 
 lbl_Exit:

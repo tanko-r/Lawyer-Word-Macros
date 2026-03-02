@@ -1,4 +1,5 @@
 Attribute VB_Name = "FilePath"
+Option Explicit
 Sub FilePathMacro()
 ' Inserts filepath as plaintext plus dynamic filename.  This is to preserve the FKSDO filepath when converting to PDF or sending to outsiders.
 
@@ -11,7 +12,8 @@ Sub FilePathMacro()
     Selection.ParagraphFormat.SpaceBefore = 6
     Selection.ParagraphFormat.spaceAfter = 0
     Selection.TypeText (Application.ActiveDocument.Path & "\")
-    Selection.Fields.Add Range:=Selection.Range, Type:=wdFieldFileName, PreserveFormatting:=True
+    Selection.Fields.Add Range:=Selection.Range, Type:=wdFieldEmpty, text:= _
+        "FILENAME", PreserveFormatting:=True
     'Selection.HomeKey Unit:=wdLine
     
 '   Selection.Fields.Unlink 'Save for later.  Need to figure out how to loop through footers before this will work correctly.  Otherwise only one of the footers will update.
@@ -24,6 +26,7 @@ Dim oSec As Section
 Dim oCursor As Range
 
 Application.ScreenUpdating = False
+
 
 
 Set oCursor = Selection.Range 'get current position
@@ -137,20 +140,21 @@ Sub UpdatePathMacro()
             Selection.MoveEndWhile Cset:=Chr(13), count:=-1      'Don't delete the paragraph break
             Selection.Delete
             Selection.MoveLeft count:=1
-            Selection.EndOf Unit:=wdStory, Extend:=wdMove 'go to the end of the footer
+            Selection.EndOf Unit:=wdParagraph, Extend:=wdMove 'go to the end of the line (inc. page number) and add a par break
+            'Selection.TypeText Chr(13)
             Selection.TypeText " "
             Selection.MoveLeft count:=1  'The FILENAME field glitches in the FilePathMacro glitches if it is at the very end.
             FilePath.FilePathMacro
-'            Selection.EndOf Unit:=wdStory, Extend:=wdMove
+            Selection.EndOf Unit:=wdStory, Extend:=wdMove
         Else
-            Selection.EndOf Unit:=wdStory, Extend:=wdMove 'go to the end of the footer
-            Selection.InsertAfter vbCr & " "
-            Selection.Collapse wdCollapseEnd
-            Selection.MoveLeft count:=1  'The FILENAME field glitches in the FilePathMacro glitches if it is at the very end.
-            FilePath.FilePathMacro
-            'Selection.TypeText Chr(13)
-            'Dim rng As Range
-            'Dim remainingText As Range
+            If pathExists = False Then
+                Selection.EndOf Unit:=wdParagraph, Extend:=wdMove 'go to the end of the line (inc. page number) and add a par break
+                Selection.InsertAfter (Chr(13) & " ")
+                FilePath.FilePathMacro
+                Selection.TypeText Chr(13)
+                'Dim rng As Range
+                'Dim remainingText As Range
+            End If
         End If
     
         ActiveWindow.ActivePane.View.SeekView = wdSeekMainDocument ' Not sure why but this is necessary to actually move to the next section.
@@ -178,18 +182,25 @@ Sub UpdatePathMacro()
                 Dim rng As Range
                 Set rng = Selection.Range
                 Set remainingText = rng.Document.Range(rng.End, rng.Document.Range.End)
+                If Len(remainingText.text) > 0 Then
+                    ' If there is text after the inserted text, insert a line break after the inserted text
+                    rng.InsertAfter vbLf
+                End If
                 Selection.EndOf Unit:=wdStory, Extend:=wdMove
             Else
-                Selection.EndOf Unit:=wdParagraph, Extend:=wdMove 'go to the end of the line (inc. page number) and add a par break
-                Selection.InsertAfter (Chr(13) & " ")
-                FilePath.FilePathMacro
-                Selection.Collapse wdCollapseEnd
-                Selection.TypeText vbLf
-                'Dim rng As Range
-                'Dim remainingText As Range
-                'Set rng = Selection.Range
-                'Set remainingText = rng.Document.Range(rng.End, rng.Document.Range.End)
-                'If Len(remainingText.text) > 0 Then rng.InsertAfter vbCr  ' If there is text after the inserted text, insert a line break after the inserted text
+                If pathExists = False Then
+                    Selection.EndOf Unit:=wdParagraph, Extend:=wdMove 'go to the end of the line (inc. page number) and add a par break
+                    Selection.InsertAfter (Chr(13) & " ")
+                    FilePath.FilePathMacro
+                    Selection.Collapse wdCollapseEnd
+                    Selection.TypeText vbLf
+                    'Dim rng As Range
+                    'Dim remainingText As Range
+                    'Set rng = Selection.Range
+                    'Set remainingText = rng.Document.Range(rng.End, rng.Document.Range.End)
+                    'If Len(remainingText.text) > 0 Then rng.InsertAfter vbCr  ' If there is text after the inserted text, insert a line break after the inserted text
+                End If
+
             End If
 
             If Selection.Information(wdActiveEndSectionNumber) <> wDoc.Sections.count Then 'If not the last section, then go the next section
@@ -280,4 +291,7 @@ Dim currentPosition As Range
 
 FooterCheck = inFolder
 End Function
+
+
+
 

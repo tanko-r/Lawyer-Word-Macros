@@ -16,24 +16,22 @@ Select Case control.ID
         MakeDefinition.MakeDefinition
     Case Is = "BoldDefTerms"
         BoldDefinedTerms.BoldDefinedTerms
-    'Case Is = "CrossRef"
-    '    ConvertToCrossRef.ConvertToCrossRef
+    Case Is = "CrossRef"
+        ConvertToCrossRef.ConvertToCrossRef
     Case Is = "HowDefined"
         TermDefined.FindDef
     Case Is = "RmvLnBrks"
         RemoveLineBreaks.RemoveLineBreaks
-    Case Is = "NxtSnt"
-        StepThroughSentences.StepRightSentence
-    Case Is = "FilePath"
-        FilePath.FilePathMacro
+    'Case Is = "FilePath"
+    '    FilePath.FilePathMacro
     Case Is = "FastCompare"
         FastCompare.FastCompare
     Case Is = "FKSDOSave"
         FKSDOSaveAs.SaveAsFKSDOFile
     Case Is = "SaveNewVer"
         FKSDONewVersion.SaveNewVersion_Word
-    Case Is = "SaveInSeq"
-        FKSDOSaveInSequence.SaveInSequence
+    'Case Is = "SaveInSeq"
+    '    FKSDOSaveInSequence.SaveInSequence
     Case Is = "HighlightTerm"
         HilightTerm.HighlightSelectedTerm
     Case Is = "BigHighlightTerm"
@@ -44,26 +42,32 @@ Select Case control.ID
         HighlightBrackets.HighlightBrackets
     Case Is = "CopyToForms"
         CopyToForms.CopyToForms
-    Case Is = "NumeralsOnly"
-        NumeralsOnly.NumeralsOnly
-    Case Is = "FKSDONote"
-        FKSDONote.FKSDONoteMacro
-    Case Is = "PrintChangePages"
-        PrintChangePages.PrintOnlyMarkupPages
+    'Case Is = "NumeralsOnly"
+    '    NumeralsOnly.NumeralsOnly
+    'Case Is = "FKSDONote"
+    '    FKSDONote.FKSDONoteMacro
+    'Case Is = "PrintChangePages"
+    '    PrintChangePages.PrintOnlyMarkupPages
     Case Is = "DontAddSpace"
         DontAddSpace.DontAddSpaceMacro
-    Case Is = "UpdatePath"
-        FilePath.UpdatePathMacro
+    'Case Is = "UpdatePath"
+    '    FilePath.UpdatePathMacro
     Case Is = "NewIncremental"
         FKSDONewIncremental.SaveNewIncremental
-    Case Is = "EmailDoc"
-        EmailDocument.EmailDocumentMacro
+    'Case Is = "EmailDoc"
+    '    EmailDocument.EmailDocumentMacro
     Case Is = "OpenFolder"
         FilePath.OpenFolder
-    Case Is = "MTKFastCompare"
-        FastCompare.MTKFastCompare
-    Case Is = "CompareToForm"
-        CompareToForm.FastCompareToForm
+    'Case Is = "MTKFastCompare"
+    '    FastCompare.MTKFastCompare
+    Case Is = "DeleteFooterBoxes"
+        DeleteFooterBox.DeleteFooterBox
+    Case Is = "InsertPageNumber"
+        InsertPageNumber.InsertPageNumber
+    Case Is = "AttachRedline"
+        AttachRedline.AttachRedline
+    Case Is = "NarrowCompare"
+        NarrowCompare.StartSelectionCompare
 End Select
 End Sub
 

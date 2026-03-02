@@ -11,15 +11,12 @@ Dim fso As Object
 Set fso = CreateObject("scripting.FileSystemObject")
 Set sDoc = ActiveDocument
 
-If ActiveDocument.Saved = False Then
-    Select Case MsgBox("Save this document first? Only the saved version will be copied.", vbYesNoCancel)
-        Case Is = vbYes
-            ActiveDocument.Save
-        Case Is = vbCancel
-            Exit Sub
-    End Select
-End If
-
+Select Case MsgBox("Save this document first? Only the saved version will be copied.", vbYesNoCancel)
+    Case Is = vbYes
+        If ActiveDocument.ReadOnly = True Then ActiveDocument.SaveAs2 ("C:\Users\dsrub\Downloads\" & ActiveDocument.Name) Else: ActiveDocument.Save
+    Case Is = vbCancel
+        Exit Sub
+End Select
 
 sFormName = InputBox("Name this form, e.g. 'Lease -- Tenant friendly'")
 If Len(sFormName) = 0 Then Exit Sub
@@ -27,15 +24,15 @@ If Len(sFormName) = 0 Then Exit Sub
 sDocPath = sDoc.FullName
 Set sFolderPicker = Application.FileDialog(msoFileDialogFolderPicker)
 With sFolderPicker
-        .Title = "Select a Folder"
+        .title = "Select a Folder"
         .AllowMultiSelect = False
-        .InitialFileName = "C:\Users\DSR\Documents\Candidate Forms\"
-        .Show
-        sFormPath = .SelectedItems(1) & "\" & sFormName & ".docx"
+        .InitialFileName = "C:\Users\dsrub\Documents\Polsinelli Candidate Forms\Candidate Forms\"
+        If .Show <> 0 Then sFormPath = .SelectedItems(1) & "\" & sFormName & ".docx" Else Exit Sub
 End With
 
 fso.CopyFile Source:=sDocPath, Destination:=sFormPath
-fso.Quit
+Set fso = Nothing
+
 
 End Sub
 
