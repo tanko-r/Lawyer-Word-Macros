@@ -10,7 +10,7 @@ Sub DeleteFooterBox()
     For Each objHdrFtr In objSect.Footers
       For Each objShp In objHdrFtr.Shapes
         If objShp.Type = msoTextBox Then
-          strText = objShp.TextFrame.TextRange.text
+          strText = objShp.TextFrame.textRange.text
           
           ' Check for the specific format
           If (strText Like "#########.#*" Or strText Like "#########.##*" _

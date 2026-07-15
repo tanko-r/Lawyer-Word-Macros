@@ -16,7 +16,7 @@ Sub HighlightBrackets()
         .Wrap = wdFindStop
         .Format = False
         .MatchCase = False
-        .MatchWholeWord = False
+        .matchWholeWord = False
         .MatchAllWordForms = False
         .MatchSoundsLike = False
         .MatchWildcards = True

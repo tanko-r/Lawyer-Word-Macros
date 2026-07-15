@@ -21,7 +21,7 @@ Sub FormatTextBetweenPercentAndDeleteMarkers()
         .Wrap = wdFindStop ' Stop at the end of the document - safer with deletions
         .Format = False ' We are finding by text pattern, not formatting
         .MatchCase = False
-        .MatchWholeWord = False
+        .matchWholeWord = False
         .MatchWildcards = True ' Essential to use the wildcard pattern
         .MatchSoundsLike = False
         .MatchAllWordForms = False

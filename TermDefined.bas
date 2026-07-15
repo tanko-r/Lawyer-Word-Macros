@@ -36,13 +36,13 @@ Sub FindDef()
         .ClearFormatting
         ' We are searching for the selected text when it is preceded by a double-quote,
         ' as this is how definitions are typically formatted (e.g., "Term" means...).
-        ' Word's Find function is usually smart enough to match both straight ("") and curly (ìî) quotes.
+        ' Word's Find function is usually smart enough to match both straight ("") and curly (‚Äú‚Äù) quotes.
         .text = Chr(34) & originalSelection.text
         .Forward = True
         .Wrap = wdFindStop ' Stop searching at the end of the document.
         .Format = False
         .MatchCase = False ' Set to True if you need case-sensitive searches.
-        .MatchWholeWord = False
+        .matchWholeWord = False
         .MatchWildcards = False
         .MatchSoundsLike = False
         .MatchAllWordForms = False
@@ -92,7 +92,3 @@ Sub FindDef()
     Set searchRange = Nothing
 
 End Sub
-
-
-
-

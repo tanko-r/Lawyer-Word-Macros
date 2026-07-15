@@ -3,7 +3,7 @@ Attribute VB_Name = "RemoveLineBreaks"
 
 Sub RemoveLineBreaks()
 'A basic Word macro coded by Greg Maxey
-Dim oRng As Word.Range
+Dim oRng As word.Range
 Set oRng = Selection.Range
   If oRng.Characters.Last = Chr(13) Or oRng.Characters.Last = Chr(11) Then
     oRng.End = oRng.End - 1
@@ -24,4 +24,3 @@ Sub RemoveDoubleLineBreaks()
   End With
 
 End Sub
-

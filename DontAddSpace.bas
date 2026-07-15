@@ -2,10 +2,10 @@ Attribute VB_Name = "DontAddSpace"
 Sub DontAddSpaceMacro()
     
     ' Declaring variables to hold our objects.
-    Dim currentParagraph As Word.Paragraph
+    Dim currentParagraph As word.Paragraph
     Dim selectedStyles As New Collection
     Dim styleName As Variant
-    Dim styleToModify As Word.Style
+    Dim styleToModify As word.Style
     
     ' We start by checking if the user has selected any text.
     If Selection.Type = wdSelectionNormal Then

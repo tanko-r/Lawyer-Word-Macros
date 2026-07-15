@@ -306,7 +306,7 @@ Private Sub ApplyLevelFormatting(ByVal para As Paragraph, ByVal leftIndentPts As
         .Alignment = wdAlignParagraphLeft
         .SpaceBefore = 0 ' Reset
         .TabStops.ClearAll
-        .TabStops.Add Position:=leftIndentPts + hangingIndentPts, Alignment:=wdAlignTabLeft, Leader:=wdTabLeaderSpaces
+        .TabStops.Add position:=leftIndentPts + hangingIndentPts, Alignment:=wdAlignTabLeft, Leader:=wdTabLeaderSpaces
     End With
     On Error GoTo 0
 End Sub
@@ -390,7 +390,7 @@ Private Sub EnsureTabsAfterMultipleNumbers(ByVal para As Paragraph, ByVal number
             .Wrap = wdFindStop
             .Format = False
             .MatchCase = True ' Important for (a) vs (A)
-            .MatchWholeWord = False ' Number part might be adjacent to text
+            .matchWholeWord = False ' Number part might be adjacent to text
             .MatchWildcards = False
             .MatchSoundsLike = False
             .MatchAllWordForms = False

@@ -8,7 +8,7 @@ Sub UpdateListIndentsBasedOnSelectedLevel()
     Dim i As Integer
     
     ' Check if the selection is within a list
-    If Selection.Range.ListFormat.ListType = wdListNoNumbering Then
+    If Selection.Range.ListFormat.listType = wdListNoNumbering Then
         MsgBox "The selection is not part of a list.", vbExclamation
         Exit Sub
     End If
@@ -38,4 +38,3 @@ Sub UpdateListIndentsBasedOnSelectedLevel()
     ' Inform the user that the indents have been updated
     MsgBox "List indents have been updated based on the selected list level.", vbInformation
 End Sub
-

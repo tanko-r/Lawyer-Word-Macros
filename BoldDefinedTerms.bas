@@ -13,7 +13,7 @@ Sub BoldDefinedTerms()
         .Wrap = wdFindStop
         .Format = False
         .MatchCase = False
-        .MatchWholeWord = False
+        .matchWholeWord = False
         .MatchWildcards = False
         .MatchSoundsLike = False
         .MatchAllWordForms = False
@@ -34,7 +34,7 @@ Sub BoldDefinedTerms()
         .Wrap = wdFindContinue
         .Format = True
         .MatchCase = False
-        .MatchWholeWord = False
+        .matchWholeWord = False
         .MatchAllWordForms = False
         .MatchSoundsLike = False
         .MatchWildcards = True
@@ -52,7 +52,7 @@ Sub BoldDefinedTerms()
         .Wrap = wdFindContinue
         .Format = True
         .MatchCase = False
-        .MatchWholeWord = False
+        .matchWholeWord = False
         .MatchAllWordForms = False
         .MatchSoundsLike = False
         .MatchWildcards = True

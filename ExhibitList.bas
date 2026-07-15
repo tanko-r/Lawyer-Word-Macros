@@ -34,7 +34,7 @@ Sub GenerateSimpleExhibitList()
         .Forward = True
         .Wrap = wdFindStop
         .MatchCase = False          ' Handles "Exhibit" or "EXHIBIT"
-        .MatchWholeWord = False
+        .matchWholeWord = False
         .MatchWildcards = True      ' MUST be True for the pattern
 
         ' Pattern: "Exhibit" followed by 1+ spaces, followed by a single letter or number

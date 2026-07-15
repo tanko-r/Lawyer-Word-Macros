@@ -270,7 +270,7 @@ With DocSummary
     .Line.Visible = msoTrue
     .Shadow.Visible = msoFalse
     .Fill.ForeColor.RGB = RGB(255, 255, 255)
-    With .TextFrame.TextRange
+    With .TextFrame.textRange
         .Style = wdStylePlainText
         .ParagraphFormat.Reset
         .ParagraphFormat.FirstLineIndent = 0
@@ -281,7 +281,7 @@ With DocSummary
         .InsertAfter "Redline" & Chr(13) & "Original:" & Chr(9) & StrOldCaption & Chr(13) & "Revised:" & Chr(9) & StrNewCaption 'how do I make "Redline" bold without a cumbersome for loop?
     End With
     
-    .TextFrame.TextRange.Paragraphs(1).Range.Font.Bold = True ' Bold "Redline"
+    .TextFrame.textRange.Paragraphs(1).Range.Font.Bold = True ' Bold "Redline"
 End With
 ' AutoFit the textbox to its content
     With DocSummary
@@ -289,4 +289,3 @@ End With
         .TextFrame.AutoSize = 1         'NOTE: This must be set as a numerical value. Per Office VBA docs, this associates with msoAutoSizeShapeToFitText
     End With
 End Function
-

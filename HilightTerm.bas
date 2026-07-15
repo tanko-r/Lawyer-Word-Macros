@@ -25,7 +25,7 @@ Sub HighlightSelectedTerm()
         .ClearFormatting
         .text = strText
         .MatchCase = False
-        .MatchWholeWord = False
+        .matchWholeWord = False
         .MatchAllWordForms = False
         .MatchSoundsLike = False
         .MatchWildcards = False
@@ -53,7 +53,7 @@ Sub HighlightSelectedTerm()
         .Wrap = wdFindContinue
         .Format = True
         .MatchCase = False
-        .MatchWholeWord = False
+        .matchWholeWord = False
         .MatchAllWordForms = False
         .MatchSoundsLike = False
         .MatchWildcards = False
@@ -93,7 +93,7 @@ Sub UnHighlightSelectedTerm()
         .text = strText
         .Highlight = True ' <--- This forces the find to only look for highlighted text
         .MatchCase = False
-        .MatchWholeWord = False
+        .matchWholeWord = False
         .MatchAllWordForms = False
         .MatchSoundsLike = False
         .MatchWildcards = False
@@ -122,7 +122,7 @@ Sub UnHighlightSelectedTerm()
         .Wrap = wdFindContinue
         .Format = True
         .MatchCase = False
-        .MatchWholeWord = False
+        .matchWholeWord = False
         .MatchAllWordForms = False
         .MatchSoundsLike = False
         .MatchWildcards = False

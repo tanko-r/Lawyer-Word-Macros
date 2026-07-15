@@ -223,7 +223,7 @@ Private Sub ApplyLevelFormatting(ByVal para As Paragraph, ByVal leftIndentPts As
         .TabStops.ClearAll
         ' Add a single left-aligned tab stop positioned relative to the page margin
         ' The position is where the text after the number should start.
-        .TabStops.Add Position:=leftIndentPts + hangingIndentPts, Alignment:=wdAlignTabLeft, Leader:=wdTabLeaderSpaces
+        .TabStops.Add position:=leftIndentPts + hangingIndentPts, Alignment:=wdAlignTabLeft, Leader:=wdTabLeaderSpaces
     End With
     On Error GoTo 0
 End Sub
@@ -362,4 +362,3 @@ ErrorHandler:
     Set paraRange = Nothing
     Set charAfterRange = Nothing
 End Sub
-

@@ -43,7 +43,7 @@ Set oCursor = Selection.Range 'get current position
         .Wrap = wdFindContinue
         .Format = False
         .MatchCase = False
-        .MatchWholeWord = False
+        .matchWholeWord = False
         .MatchWildcards = False
         .MatchSoundsLike = False
         .MatchAllWordForms = False
@@ -127,7 +127,7 @@ Sub UpdatePathMacro()
             .Wrap = wdFindStop
             .Format = False
             .MatchCase = False
-            .MatchWholeWord = False
+            .matchWholeWord = False
             .MatchWildcards = False
             .MatchSoundsLike = False
             .MatchAllWordForms = False
@@ -273,7 +273,7 @@ Dim currentPosition As Range
         .Wrap = wdFindContinue
         .Format = False
         .MatchCase = False
-        .MatchWholeWord = False
+        .matchWholeWord = False
         .MatchWildcards = False
         .MatchSoundsLike = False
         .MatchAllWordForms = False
@@ -291,7 +291,3 @@ Dim currentPosition As Range
 
 FooterCheck = inFolder
 End Function
-
-
-
-
